@@ -1,0 +1,18 @@
+{
+	"minimum-stability": "dev",
+    "require": {
+       "apereo/phpcas": "1.6.1",
+       "phpoffice/phpspreadsheet": "1.29.0",
+       "phpoffice/phpword": "1.2.0"
+    },
+	"repositories": {
+		"packagist": {
+			"type": "composer",
+			"url": "http://repo.packagist.org"
+		}
+	},
+	"config": {
+		"secure-http": false,
+		"disable-tls": true
+	}
+}

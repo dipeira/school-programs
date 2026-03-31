@@ -1,0 +1,10 @@
+vendor/
+conf_local.php
+login_log.txt
+pdf/vev.pdf
+conf_sch.php
+phpgrid/conf_sch.php
+composer.lock
+login_log.txt
+excel_file.xlsx
+conf.php

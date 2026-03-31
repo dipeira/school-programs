@@ -1,0 +1,37 @@
+[
+    {
+        "name": "prSxetos",
+        "description": "Τρέχον σχολικό έτος",
+        "value": "2024-25"
+    },
+    {
+        "name": "prAdmin1",
+        "description": "Όνομα χρήστη ΠΣΔ διαχειριστή 1",
+        "value": "dipeira"
+    },
+    {
+        "name": "prAdmin2",
+        "description": "Όνομα χρήστη ΠΣΔ διαχειριστή 2",
+        "value": "taypeira"
+    },
+    {
+        "name": "canAdd",
+        "description": "Ο χρήστης μπορεί να καταχωρήσει πρόγραμμα",
+        "value": true
+    },
+    {
+        "name": "lockBasic",
+        "description": "Κλείδωμα βασικών πεδίων (σχολείο, τίτλος, εκπαίδευτικοί)",
+        "value": false
+    },
+    {
+        "name": "canVev",
+        "description": "Ο χρήστης μπορεί να βεβαιώσει την ολοκλήρωση του προγράμματος",
+        "value": false
+    },
+    {
+        "name": "showVev",
+        "description": "Ο χρήστης μπορεί να λάβει βεβαίωση",
+        "value": true
+    }
+]
