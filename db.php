@@ -1,87 +1,77 @@
+<?php
 session_start();
 require_once('conf.php'); // Include your configuration file
 
 // ARCHIVE TABLE OPERATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'archive') {
     if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
-        echo json_encode(['success' => false, 'error' => 'Unauthorized action. Dipeira rank required.']);
+        echo json_encode(['success' => false, 'error' => 'Unauthorized action. Admin rank required.']);
         exit;
     }
     
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-    if ($mysqli->connect_error) {
-        echo json_encode(['success' => false, 'error' => 'Database connection error']);
-        exit;
-    }
-
-    $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['archive_year_suffix']);
-    if (empty($suffix)) {
-        echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
-        exit;
-    }
-    
-    $backupTableName = "progs_" . $suffix;
-    
-    // Check if table already exists
-    $check = $mysqli->query("SHOW TABLES LIKE '$backupTableName'");
-    if ($check->num_rows > 0) {
-        echo json_encode(['success' => false, 'error' => 'Archive table already exists.']);
-        exit;
-    }
-    
-    $mysqli->begin_transaction();
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     try {
+        $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+        $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['archive_year_suffix']);
+        if (empty($suffix)) {
+            echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
+            exit;
+        }
+        
+        $backupTableName = "progs_" . $suffix;
+        
+        // Check if table already exists
+        $check = $mysqli->query("SHOW TABLES LIKE '$backupTableName'");
+        if ($check->num_rows > 0) {
+            echo json_encode(['success' => false, 'error' => 'Το αρχείο ' . $backupTableName . ' υπάρχει ήδη!']);
+            exit;
+        }
+        
+        // RENAME causes implicit commit
         $mysqli->query("RENAME TABLE `$prTable` TO `$backupTableName`");
         $mysqli->query("CREATE TABLE `$prTable` LIKE `$backupTableName`");
-        $mysqli->commit();
+        
         echo json_encode(['success' => true]);
     } catch(Exception $e) {
-        $mysqli->rollback();
         echo json_encode(['success' => false, 'error' => 'Archiving failed: ' . $e->getMessage()]);
     }
-    $mysqli->close();
+    if (isset($mysqli)) $mysqli->close();
     exit;
 }
 
 // RESTORE TABLE OPERATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'restore') {
     if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
-        echo json_encode(['success' => false, 'error' => 'Unauthorized action. Dipeira rank required.']);
+        echo json_encode(['success' => false, 'error' => 'Unauthorized action. Admin rank required.']);
         exit;
     }
     
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-    if ($mysqli->connect_error) {
-        echo json_encode(['success' => false, 'error' => 'Database connection error']);
-        exit;
-    }
-
-    $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['restore_year_suffix']);
-    if (empty($suffix)) {
-        echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
-        exit;
-    }
-    
-    $backupTableName = "progs_" . $suffix;
-    
-    // Check if backup table natively exists
-    $check = $mysqli->query("SHOW TABLES LIKE '$backupTableName'");
-    if ($check->num_rows === 0) {
-        echo json_encode(['success' => false, 'error' => 'Το επιλεγμένο αρχείο (' . $backupTableName . ') δεν υπάρχει!']);
-        exit;
-    }
-    
-    $mysqli->begin_transaction();
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     try {
-        $mysqli->query("DROP TABLE IF EXISTS `$prTable`"); // Physically delete current active
-        $mysqli->query("RENAME TABLE `$backupTableName` TO `$prTable`"); // Shunt backup over to master
-        $mysqli->commit();
+        $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+        $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['restore_year_suffix']);
+        if (empty($suffix)) {
+            echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
+            exit;
+        }
+        
+        $backupTableName = "progs_" . $suffix;
+        
+        // Check if backup table exists
+        $check = $mysqli->query("SHOW TABLES LIKE '$backupTableName'");
+        if ($check->num_rows === 0) {
+            echo json_encode(['success' => false, 'error' => 'Το επιλεγμένο αρχείο δεν υπάρχει!']);
+            exit;
+        }
+        
+        $mysqli->query("DROP TABLE IF EXISTS `$prTable`");
+        $mysqli->query("RENAME TABLE `$backupTableName` TO `$prTable`");
+        
         echo json_encode(['success' => true]);
     } catch(Exception $e) {
-        $mysqli->rollback();
         echo json_encode(['success' => false, 'error' => 'Restoration failed: ' . $e->getMessage()]);
     }
-    $mysqli->close();
+    if (isset($mysqli)) $mysqli->close();
     exit;
 }
 

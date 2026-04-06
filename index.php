@@ -114,6 +114,25 @@ if (!$prDebug) {
     $_SESSION['loggedin'] = 1;
 }
 
+// Check for records to enable dynamic titles in <head>
+$conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+$isArchive = false;
+$availableYears = [];
+if ($conn->connect_error) {
+    // Fail silently or handle error later
+} else {
+    $tableQuery = $conn->query("SHOW TABLES LIKE 'progs\_%'");
+    if ($tableQuery) {
+        while ($t = $tableQuery->fetch_array()) {
+            $availableYears[] = str_replace('progs_', '', $t[0]);
+        }
+    }
+    if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
+        $prTable = 'progs_' . $_GET['year'];
+        $isArchive = true;
+        $prSxetos = $_GET['year']; // Override title
+    }
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -141,8 +160,8 @@ if (!$prDebug)
 	$uid = phpCAS::getUser();
 	$em1 = $uid . "@sch.gr";
 	$em2 = phpCAS::getAttribute('mail');
-	if (!strcmp($uid,$prAdmin1) || !strcmp($uid,$prAdmin2))
-		$_SESSION['admin'] = 1;
+	
+	$_SESSION['admin'] = ($uid === $prAdmin1 || $uid === $prAdmin2) ? 1 : 0;
 	$_SESSION['email1'] = $em1;
 	$_SESSION['email2'] = $em2;
 	$_SESSION['uid'] = $uid;
@@ -154,34 +173,13 @@ else {
   $uid = $pruid;
   $em1 = $prem1;
   $em2 = $prem2;
-  if (strcmp($uid,$prAdmin1) <>0 || !strcmp($uid,$prAdmin2) <>0) {
-    $_SESSION['admin'] = 0;
-  } else {
-    $_SESSION['admin'] = 1;
-  }
+
+  $_SESSION['admin'] = ($uid === $prAdmin1 || $uid === $prAdmin2) ? 1 : 0;
   $_SESSION['email1'] = $em1;
   $_SESSION['email2'] = $em2;
   $_SESSION['uid'] = $uid;
 }
 
-
-if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
-	// Check if records exist
-    $conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-    
-    // Check for archive mode
-    $isArchive = false;
-    $availableYears = [];
-    $tableQuery = $conn->query("SHOW TABLES LIKE 'progs\_%'");
-    if ($tableQuery) {
-        while ($t = $tableQuery->fetch_array()) {
-            $availableYears[] = str_replace('progs_', '', $t[0]);
-        }
-    }
-    if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
-        $prTable = 'progs_' . $_GET['year'];
-        $isArchive = true;
-    }
 
     if (!$_SESSION['admin']) {   
         $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 WHERE s.email1='" . $_SESSION['email1'] . "' OR s.email1='" . $_SESSION['email2'] . "' OR s.code='$sch_code'";
@@ -199,6 +197,7 @@ if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
 		// Ensure 
 		if ($_SESSION['admin']){
 			$schid = 1;
+            $sch_name = "Διαχείριση Διεύθυνσης";
 		}
 		
 		// only admin can delete for now
@@ -290,10 +289,6 @@ if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
 				echo "</div>";
         $conn->close();
     
-        
-} else {
-    die('Σφάλμα επαλήθευσης στοιχείων χρήστη (Authentication Error)');
-}
 
 // Add your export and add new program buttons here
 
@@ -352,7 +347,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                 <input type="hidden" name="action" value="archive">
                 <div class="mb-3">
                     <label for="archive_year_suffix" class="form-label fw-bold">Όνομα Σχολικού Έτους (π.χ. 2024-25):</label>
-                    <input type="text" class="form-control" id="archive_year_suffix" name="archive_year_suffix" placeholder="YYYY-YY" required pattern="[a-zA-Z0-9\-_]+">
+                    <input type="text" class="form-control" id="archive_year_suffix" name="archive_year_suffix" placeholder="YYYY-YY" required pattern="\d{4}-\d{2}" title="Παρακαλούμε χρησιμοποιήστε τη μορφή ΕΕΕΕ-ΕΕ (π.χ. 2024-25)">
                 </div>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" id="confirmArchive" required>

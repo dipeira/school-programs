@@ -290,6 +290,13 @@ $(document).ready(function() {
     $('#archiveForm').submit(function(event) {
         event.preventDefault();
         
+        var yearSuffix = $('#archive_year_suffix').val();
+        var yearRegex = /^\d{4}-\d{2}$/;
+        if (!yearRegex.test(yearSuffix)) {
+            Swal.fire('Σφάλμα!', 'Παρακαλούμε χρησιμοποιήστε τη μορφή ΕΕΕΕ-ΕΕ (π.χ. 2024-25)', 'error');
+            return;
+        }
+
         if (!$('#confirmArchive').is(':checked')) {
             showAlert('You must confirm the destructive action.', 'error');
             return;
@@ -317,7 +324,8 @@ $(document).ready(function() {
             },
             error: function(err) {
                 console.log(err.responseText);
-                Swal.fire('Σφάλμα!', 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.', 'error');
+                var errorMsg = err.responseText ? ' (Server Response: ' + err.responseText.substring(0, 500) + ')' : '';
+                Swal.fire('Σφάλμα!', 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.' + errorMsg, 'error');
             }
         });
     });
@@ -353,7 +361,8 @@ $(document).ready(function() {
             },
             error: function(err) {
                 console.log(err.responseText);
-                Swal.fire('Σφάλμα!', 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.', 'error');
+                var errorMsg = err.responseText ? ' (Server Response: ' + err.responseText.substring(0, 500) + ')' : '';
+                Swal.fire('Σφάλμα!', 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.' + errorMsg, 'error');
             }
         });
     });

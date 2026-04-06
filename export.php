@@ -58,7 +58,8 @@ while ($row_data = $result->fetch_assoc()) {
 $writer = new Xlsx($spreadsheet);
 
 // Set the file path where the Excel file will be saved
-$filePath = 'files/excel_file.xlsx';
+$yearSuffix = (isset($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) ? '_' . $_GET['year'] : '';
+$filePath = 'files/excel_file' . $yearSuffix . '.xlsx';
 
 // Save the Excel file to the specified path
 $writer->save($filePath);

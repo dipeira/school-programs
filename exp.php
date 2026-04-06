@@ -48,6 +48,7 @@ if ($conn->connect_error) {
 // Use prepared statement to prevent SQL injection
 if (isset($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
     $prTable = "progs_" . $_GET['year'];
+    $prSxetos = $_GET['year'];
 }
 $stmt = $conn->prepare("SELECT p.id, p.titel, p.nam1, p.categ, p.nam2, p.nam3, s1.name as s1name FROM `$prTable` p JOIN $schTable s1 ON p.sch1 = s1.id WHERE p.id = ?");
 $stmt->bind_param('i', $progId);
@@ -56,6 +57,7 @@ $result = $stmt->get_result();
 
 // Fetch record
 $rec = mysqli_fetch_assoc($result);
+$rec['sxetos'] = $prSxetos; // Add year to template data
 $stmt->close();
 
 // Check if the user is allowed to view the program
