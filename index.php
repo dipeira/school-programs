@@ -11,12 +11,15 @@ date_default_timezone_set('Europe/Athens');
 // get school data
 function get_school($code, $conn) {
 	global $schTable;
-	$sql = "SELECT id,name FROM $schTable WHERE code = $code";
+    // Cast to string and escape to prevent SQL injection or type errors
+    $code_safe = mysqli_real_escape_string($conn, (string)$code);
+	$sql = "SELECT id,name FROM $schTable WHERE code = '$code_safe'";
 	$result = $conn->query($sql);
+    if (!$result) return ['id' => 0, 'name' => 'Άγνωστο'];
 	$row = mysqli_fetch_assoc($result);
 	return [
-			'id' => $row['id'],
-			'name' => $row['name']
+			'id' => $row['id'] ?? 0,
+			'name' => $row['name'] ?? 'Άγνωστο'
 	];
 }
 
@@ -168,9 +171,9 @@ if (!$prDebug)
 }
 // fill for local testing
 else {
-  $sch_name = $prsch_name;
-	$sch_code = 0;
   $uid = $pruid;
+  $sch_code = $uid; 
+  $sch_name = $prsch_name;
   $em1 = $prem1;
   $em2 = $prem2;
 
@@ -181,24 +184,31 @@ else {
 }
 
 
-    if (!$_SESSION['admin']) {   
-        $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 WHERE s.email1='" . $_SESSION['email1'] . "' OR s.email1='" . $_SESSION['email2'] . "' OR s.code='$sch_code'";
+    if (!$_SESSION['admin']) {
+        $clauses = [];
+        if (!empty($_SESSION['email1'])) $clauses[] = "s.email1='" . mysqli_real_escape_string($conn, $_SESSION['email1']) . "'";
+        if (!empty($_SESSION['email2'])) $clauses[] = "s.email2='" . mysqli_real_escape_string($conn, $_SESSION['email2']) . "'";
+        if (!empty($sch_code)) $clauses[] = "s.code='" . mysqli_real_escape_string($conn, $sch_code) . "'";
+        
+        $where = !empty($clauses) ? implode(" OR ", $clauses) : "1=0"; // Match nothing if no identifier
+        $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 WHERE ($where)";
 	} else {
 		$sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1";
 	}
-		$result = $conn->query($sql);
-		// Get sch id
-		$schid = 0;
-		if (strlen($sch_name) == 0){
-			$function_data = get_school($sch_code, $conn);
-			$sch_name = $function_data['name'];
-			$schid = $function_data['id'];
-		}
-		// Ensure 
-		if ($_SESSION['admin']){
-			$schid = 1;
-            $sch_name = "Διαχείριση Διεύθυνσης";
-		}
+    $schid = 0; // Initialize schid
+	$result = $conn->query($sql);
+    
+    // Ensure admin name is set early to prevent empty-name lookup
+    if ($_SESSION['admin']){
+        $schid = 1;
+        $sch_name = "Διαχείριση Διεύθυνσης";
+    }
+
+    if (strlen($sch_name) == 0){
+        $function_data = get_school($sch_code, $conn);
+        $sch_name = $function_data['name'];
+        $schid = $function_data['id'];
+    }
 		
 		// only admin can delete for now
 		$canDelete = $_SESSION['admin'] ? 1 : 0;
@@ -260,7 +270,7 @@ else {
 								    echo '" data-lock-basic="'.$lockBasic.'" data-admin="'.$_SESSION['admin'].'"><span class="bi-pencil-square"></span>&nbsp;Επεξεργασία</a>';
                                 } else { echo '<td>'; }
 								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'" data-year="'.$archData.'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
-								echo $showVev ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
+								echo ($showVev && !$isArchive) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
 								if (!$isArchive) echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
 								echo '</td>';
                 echo '</tr>';
