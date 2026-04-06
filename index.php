@@ -279,7 +279,7 @@ if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
 					echo "<!-- Button to open the modal -->";
 					echo '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
 					echo '<button type="button" class="btn btn-success" id="exportButton" data-year="'.(isset($_GET['year'])?$_GET['year']:'').'"><span class="bi bi-file-earmark-excel"></span>&nbsp;Εξαγωγή σε Excel</button>';
-                    if ($_SESSION['uid'] === 'dipeira') {
+                    if ($_SESSION['uid'] === 'dipeira' || $_SESSION['uid'] === 'taypeira') {
                         echo '<button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#archiveModal"><span class="bi-archive"></span>&nbsp;Διαχείριση Έτους</button>';
                     }
     			//Open Configuration Modal
