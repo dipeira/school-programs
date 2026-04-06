@@ -3,18 +3,6 @@
 ini_set('session.gc_maxlifetime', 7200);
 ini_set('session.cookie_lifetime', 0); // 0 means cookie expires when browser closes
 session_start();
-
-// Handle logout immediately before anything else
-if (isset($_POST['logout']) || isset($_GET['logged_out'])) {
-    session_unset();
-    session_destroy();
-    setcookie(session_name(), '', time() - 3600, '/');
-    if (isset($_POST['logout'])) {
-        header("Location: index.php?logged_out=1");
-        exit;
-    }
-}
-
 $_SESSION['loggedin'] = 0;
 require_once('conf.php');
 date_default_timezone_set('Europe/Athens');
@@ -23,17 +11,13 @@ date_default_timezone_set('Europe/Athens');
 // get school data
 function get_school($code, $conn) {
 	global $schTable;
-    $code = (int)$code;
 	$sql = "SELECT id,name FROM $schTable WHERE code = $code";
 	$result = $conn->query($sql);
-    if ($result && $result->num_rows > 0) {
-        $row = mysqli_fetch_assoc($result);
-        return [
-                'id' => $row['id'],
-                'name' => $row['name']
-        ];
-    }
-    return null;
+	$row = mysqli_fetch_assoc($result);
+	return [
+			'id' => $row['id'],
+			'name' => $row['name']
+	];
 }
 
 // Load variables from config.json file
@@ -46,9 +30,9 @@ foreach ($configData as $configItem) {
     ${$configItem['name']} = $configItem['value'];
 }
 
-if (!$prDebug || isset($_GET['logged_out'])) {
+if (!$prDebug) {
 	// if user not logged-in, display login form
-	if (!$_SESSION['loggedin'] && !isset($_POST['login-btn']) && !isset($_GET['ticket']) && !isset($_POST['logout'])):
+	if (!$_SESSION['loggedin'] && !isset($_POST['login-btn']) && !$_GET['ticket'] && !isset($_POST['logout'])):
 		?>
 	<!DOCTYPE html>
 		<html lang="en">
@@ -58,24 +42,28 @@ if (!$prDebug || isset($_GET['logged_out'])) {
 				<title>Είσοδος</title>
 				<!-- Bootstrap CSS -->
 				<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-				<link rel="stylesheet" href="style.css">
+				<style>
+					.jumbotron {
+						background-color: #f8f9fa;
+					}
+				</style>
 			</head>
 			
-			<body class="login-body">
-				<div class="login-container">
-					<div class="login-card">
+			<body>
+				<div class="container mt-5">
+					<div class="p-4 shadow-4 rounded-3" style="background-color: hsl(0, 0%, 94%);">
 						<h1>Προγράμματα Σχολικών Δραστηριοτήτων <?=$prSxetos?></h1>
 						<p>
 							Εισαγωγή, διαχείριση, έγκριση προγραμμάτων σχολικών δραστηριοτήτων
 						</p>
 
-  					<hr class="my-4" style="opacity: 0.1;" />
+  					<hr class="my-4" />
 
-						<p style="font-size: 0.95rem;">
+						<p>
 						Η είσοδος στο σύστημα γίνεται με κωδικούς ΠΣΔ (Πανελληνίου Σχολικού Δικτύου - <u>κωδικοί email</u>) και ΟΧΙ με κωδικούς MySchool
 						</p>
-						<form id="login" method="post" class="mt-4">
-							<button type="submit" class="login-btn-custom" name="login-btn">
+						<form id="login" method="post">
+							<button type="submit" data-mdb-button-init data-mdb-ripple-init class="btn btn-primary" name="login-btn">
 								Είσοδος με κωδικούς ΠΣΔ  
 							</button>
 						</form>
@@ -84,12 +72,12 @@ if (!$prDebug || isset($_GET['logged_out'])) {
 
 				<footer class="footer">
 					<div class="container">
-						<div class="row align-items-center">
-							<div class="col-md-10 text-md-start text-center mb-2 mb-md-0">
-								<span>&copy; ΔΙ.Π.Ε. Ηρακλείου - Τμήμα Δ' Πληροφορικής & Νέων Τεχνολογιών, 2024</span>
+						<div class="row">
+							<div class="col-md-10">
+								<span>&copy; ΔΙ.Π.Ε. Ηρακλείου - Τμήμα Δ' Πληροφορικής & νέων Τεχνολογιών, 2024</span>
 							</div>	
-							<div class="col-md-2 text-md-end text-center">
-								<a href="https://github.com/dipeira/sch-progs" target="_blank" title="Github"><img src="files/github.png" alt="Github Logo"></a>
+							<div class="col-md-2">
+								<a href="https://github.com/dipeira/sch-progs" target="_blank" title="Github"><img src="files/github.png"></a>
 							</div>
 						</div>
 					</div>
@@ -104,7 +92,14 @@ if (!$prDebug || isset($_GET['logged_out'])) {
 	require_once('vendor/autoload.php');
 	//initialize phpCAS using SAML
 	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
-	
+	// if logout
+	if (isset($_POST['logout']))
+	{
+		session_unset();
+		session_destroy(); 
+		phpCAS::logout();
+		header("Location: index.php");
+	}
 	
 	// no SSL validation for the CAS server, only for testing environments
 	phpCAS::setNoCasServerValidation();
@@ -131,7 +126,11 @@ if (!$prDebug || isset($_GET['logged_out'])) {
 		<link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.css" />
 		<link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.1/css/buttons.dataTables.css" />
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
-        <link rel="stylesheet" href="style.css">
+		<style>
+			.btn {
+						margin: 2px 0px 2px 0px;
+					}
+		</style>
 </head>
 <body>
 <?php
@@ -146,6 +145,7 @@ if (!$prDebug)
 		$_SESSION['admin'] = 1;
 	$_SESSION['email1'] = $em1;
 	$_SESSION['email2'] = $em2;
+	$_SESSION['uid'] = $uid;
 }
 // fill for local testing
 else {
@@ -161,28 +161,41 @@ else {
   }
   $_SESSION['email1'] = $em1;
   $_SESSION['email2'] = $em2;
+  $_SESSION['uid'] = $uid;
 }
 
 
 if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
 	// Check if records exist
     $conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-    if (!$_SESSION['admin']) {    
-        $sql = "SELECT *,p.id as pid FROM $prTable p JOIN $schTable s ON s.id = p.sch1 WHERE s.email1='" . mysqli_real_escape_string($conn, $_SESSION['email1']) . "' OR s.email1='" . mysqli_real_escape_string($conn, $_SESSION['email2']) . "' OR s.code='" . mysqli_real_escape_string($conn, $sch_code) . "'";
+    
+    // Check for archive mode
+    $isArchive = false;
+    $availableYears = [];
+    $tableQuery = $conn->query("SHOW TABLES LIKE 'progs\_%'");
+    if ($tableQuery) {
+        while ($t = $tableQuery->fetch_array()) {
+            $availableYears[] = str_replace('progs_', '', $t[0]);
+        }
+    }
+    if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
+        $prTable = 'progs_' . $_GET['year'];
+        $isArchive = true;
+    }
+
+    if (!$_SESSION['admin']) {   
+        $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 WHERE s.email1='" . $_SESSION['email1'] . "' OR s.email1='" . $_SESSION['email2'] . "' OR s.code='$sch_code'";
 	} else {
-		$sql = "SELECT *,p.id as pid FROM $prTable p JOIN $schTable s ON s.id = p.sch1";
+		$sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1";
 	}
 		$result = $conn->query($sql);
 		// Get sch id
 		$schid = 0;
-		$function_data = get_school($sch_code, $conn);
-        if ($function_data) {
-            $schid = $function_data['id'];
-            if (strlen($sch_name) == 0){
-                $sch_name = $function_data['name'];
-            }
-        }
-        $_SESSION['sid'] = $schid;
+		if (strlen($sch_name) == 0){
+			$function_data = get_school($sch_code, $conn);
+			$sch_name = $function_data['name'];
+			$schid = $function_data['id'];
+		}
 		// Ensure 
 		if ($_SESSION['admin']){
 			$schid = 1;
@@ -190,15 +203,29 @@ if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
 		
 		// only admin can delete for now
 		$canDelete = $_SESSION['admin'] ? 1 : 0;
-		echo '<div class="container main-content">';
-		echo "<center><h1 class='dashboard-title'><i class='bi-newspaper'></i>&nbsp;&nbsp;Προγράμματα Σχολικών Δραστηριοτήτων $prSxetos</h1></center>";
-    echo "<h4 class='school-title'>Σχολείο: " . $sch_name . "</h4>";
+		echo '<div class="container">';
+		echo "<center><h1><i class='bi-newspaper'></i>&nbsp;&nbsp;Προγράμματα Σχολικών Δραστηριοτήτων $prSxetos</h1></center>";
+    echo "<h4>Σχολείο: " . $sch_name . "</h4>";
+    
+    echo '<form method="GET" class="d-inline-flex align-items-center mb-3 mt-2">';
+    echo '<label class="fw-bold me-2">Επιλογή Έτους: </label>';
+    echo '<select name="year" class="form-select w-auto" onchange="this.form.submit()">';
+    echo '<option value="">Τρέχον Έτος (Ενεργό)</option>';
+    foreach ($availableYears as $y) {
+        $sel = (isset($_GET['year']) && $_GET['year'] === $y) ? 'selected' : '';
+        echo '<option value="' . htmlspecialchars($y) . '" ' . $sel . '>' . htmlspecialchars($y) . '</option>';
+    }
+    echo '</select></form>';
+
+    if ($isArchive) {
+        echo '<div class="alert alert-warning py-2 mb-3"><strong><i class="bi-exclamation-triangle"></i> Λειτουργία Αρχείου (Read-Only):</strong> Προβολή Ιστορικών Δεδομένων. Η επεξεργασία έχει απενεργοποιηθεί.</div>';
+    }
         // if no results
         if (!$result->num_rows) {
             $outmsg = "<h2>Δεν υπάρχουν αποτελέσματα...</h2><p>Ελέγξτε ότι:<ol><li>Ο λογαριασμός με τον οποίο κάνατε είσοδο είναι λογαριασμός <strong>Σχολικής Μονάδας ΠΣΔ <small>(π.χ. για λήψη email, είσοδο στο survey κλπ)</small></strong> και <strong>ΟΧΙ</strong> προσωπικός ή του MySchool*.</li><li>Βεβαιωθείτε ότι η σχολική σας μονάδα έχει προγράμματα σχολικών δραστηριοτήτων.</li><li>Αν ελέγξατε τα παραπάνω και συνεχίζετε να έχετε πρόβλημα, επικοινωνήστε με τη Δ/νση</li></ol><br>
             * Σε περίπτωση που είστε συνδεδεμένοι στο MySchool πρέπει να αποσυνδεθείτε και μετά να κάνετε είσοδο στο σύστημα αυτό.</p>";
             echo '<div style="font-size:10pt;color:black;font-family:arial;">' . $outmsg . '</div>';
-						$add_prog = $_SESSION['admin'] || (!$_SESSION['admin'] && $canAdd) ? '' : 'disabled';
+						$add_prog = ($_SESSION['admin'] || (!$_SESSION['admin'] && $canAdd)) && !$isArchive ? '' : 'disabled d-none';
 						$sid = $schid > 0 ? $schid : 0;
 						echo '<a href="#" class="btn btn-success add-record '.$add_prog.'" data-schid='.$sid.'><span class="bi-plus-circle"></span>&nbsp;Προσθήκη</a></td>';
         } else {
@@ -220,37 +247,44 @@ if (isset($_SESSION['email1']) || isset($_SESSION['email2'])) {
             echo '<tbody>';
             while ($row = $result->fetch_assoc()) {
                 echo '<tr>';
-                echo '<td>' . htmlspecialchars((string)$row['pid']) . '</td>';
-                echo '<td>' . htmlspecialchars((string)$row['name']) . '</td>';
-								echo '<td>' . htmlspecialchars((string)$row['categ']) . '</td>';
-                echo '<td>' . htmlspecialchars((string)$row['titel']) . '</td>';
-                echo '<td>' . htmlspecialchars((string)$row['chk']) . '</td>';
-								echo '<td>' . htmlspecialchars((string)$row['vev']) . '</td>';
-                echo '<td>' . date('d-m-Y, h:i:s',strtotime($row['timestamp'])) . '</td>';
-								echo '<td><a href="#" class="btn btn-warning edit-record" data-record-id="'.$row['pid'].'" data-sch-id="'.$row['sch1']. '" data-canvev="'.$canVev;
-								echo '" data-lock-basic="'.$lockBasic.'" data-admin="'.$_SESSION['admin'].'"><span class="bi-pencil-square"></span>&nbsp;Επεξεργασία</a>';
-								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
-								echo $showVev ? '&nbsp;<a href="exp.php?id='.$row['pid'].'" class="btn btn-success" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
-								echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
+                echo '<td>' . $row['pid'] . '</td>';
+                echo '<td>' . $row['name'] . '</td>';
+								echo '<td>' . $row['categ'] . '</td>';
+                echo '<td>' . $row['titel'] . '</td>';
+                echo '<td>' . $row['chk'] . '</td>';
+								echo '<td>' . $row['vev'] . '</td>';
+                echo '<td><span class="d-none">' . date('YmdHis', strtotime($row['timestamp'])) . '</span>' . date('d-m-Y, H:i:s',strtotime($row['timestamp'])) . '</td>';
+                                $archSuffix = isset($_GET['year']) ? '&year=' . $_GET['year'] : '';
+                                $archData = isset($_GET['year']) ? $_GET['year'] : '';
+                                if (!$isArchive) {
+								    echo '<td><a href="#" class="btn btn-warning edit-record" data-record-id="'.$row['pid'].'" data-sch-id="'.$row['sch1']. '" data-canvev="'.$canVev;
+								    echo '" data-lock-basic="'.$lockBasic.'" data-admin="'.$_SESSION['admin'].'"><span class="bi-pencil-square"></span>&nbsp;Επεξεργασία</a>';
+                                } else { echo '<td>'; }
+								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'" data-year="'.$archData.'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
+								echo $showVev ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
+								if (!$isArchive) echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
 								echo '</td>';
                 echo '</tr>';
             }
             echo '</tbody>';
             echo '</table>';
-						$add_prog = $_SESSION['admin'] || (!$_SESSION['admin'] && $canAdd) ? '' : 'disabled';
+						$add_prog = ($_SESSION['admin'] || (!$_SESSION['admin'] && $canAdd)) && !$isArchive ? '' : 'disabled d-none';
 						echo '<a href="#" class="btn btn-success add-record '.$add_prog.'" data-schid="'.$schid.'"><span class="bi-plus-circle"></span>&nbsp;Προσθήκη</a></td>';
         }
 				// Logout button
 				echo "<br><br>";
-				echo '<form action="index.php" method="POST">';
+				echo '<form action="" method="POST">';
 				echo '<div class="d-flex flex-wrap gap-2 align-items-center">';
 				if ($_SESSION['admin']){
 					echo "<!-- Button to open the modal -->";
 					echo '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
-					echo '<button type="button" class="btn btn-success" id="exportButton"><span class="bi bi-file-earmark-excel"></span>&nbsp;Εξαγωγή σε Excel</button>';
+					echo '<button type="button" class="btn btn-success" id="exportButton" data-year="'.(isset($_GET['year'])?$_GET['year']:'').'"><span class="bi bi-file-earmark-excel"></span>&nbsp;Εξαγωγή σε Excel</button>';
+                    if ($_SESSION['uid'] === 'dipeira') {
+                        echo '<button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#archiveModal"><span class="bi-archive"></span>&nbsp;Διαχείριση Έτους</button>';
+                    }
     			//Open Configuration Modal
 				}
-				echo '<button type="submit" class="btn btn-danger" name="logout" value="1"><span class="bi-box-arrow-right"></span>&nbsp;Έξοδος</button>';
+				echo '<button type="submit" class="btn btn-danger" name="logout"><span class="bi-box-arrow-right"></span>&nbsp;Έξοδος</button>';
 				echo '</div>';
 				echo '</form>';
 				echo "</div>";
@@ -288,6 +322,83 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
             </div>
         </div>
     </div>
+</div>
+<!-- Archive Modal -->
+<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="archiveModalLabel"><i class="bi-exclamation-triangle-fill"></i> Διαχείριση Σχολικού Έτους</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        
+        <!-- Tabs Nav -->
+        <ul class="nav nav-tabs bg-light pt-2 px-2" id="archiveTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active text-danger fw-bold" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="true"><i class="bi-archive"></i> Νέο Αρχείο</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link text-primary fw-bold" id="restore-tab" data-bs-toggle="tab" data-bs-target="#restore-panel" type="button" role="tab" aria-controls="restore-panel" aria-selected="false"><i class="bi-arrow-counterclockwise"></i> Undo / Επαναφορά</button>
+          </li>
+        </ul>
+
+        <!-- Tabs Content -->
+        <div class="tab-content p-3" id="archiveTabsContent">
+          <!-- Archive Panel -->
+          <div class="tab-pane fade show active" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
+            <p class="text-danger fw-bold">ΠΡΟΣΟΧΗ: Αυτή η ενέργεια μεταφέρει ΟΛΑ τα τρέχοντα προγράμματα στο αρχείο και μηδενίζει τον πίνακα για τη νέα σχολική χρονιά!</p>
+            <form id="archiveForm">
+                <input type="hidden" name="action" value="archive">
+                <div class="mb-3">
+                    <label for="archive_year_suffix" class="form-label fw-bold">Όνομα Σχολικού Έτους (π.χ. 2024-25):</label>
+                    <input type="text" class="form-control" id="archive_year_suffix" name="archive_year_suffix" placeholder="YYYY-YY" required pattern="[a-zA-Z0-9\-_]+">
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmArchive" required>
+                    <label class="form-check-label fw-bold" for="confirmArchive">
+                        Κατανοώ ότι ο τρέχων πίνακας θα καθαριστεί οριστικά!
+                    </label>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-danger"><i class="bi-archive"></i> Αρχειοθέτηση Τώρα</button>
+                </div>
+            </form>
+          </div>
+          
+          <!-- Restore Panel -->
+          <div class="tab-pane fade" id="restore-panel" role="tabpanel" aria-labelledby="restore-tab">
+            <p class="text-primary fw-bold">Επαναφορά (Undo): Αυτή η ενέργεια φέρνει πίσω έναν αρχειοθετημένο πίνακα.</p>
+            <form id="restoreForm">
+                <input type="hidden" name="action" value="restore">
+                <div class="mb-3">
+                    <label for="restore_year_suffix" class="form-label fw-bold">Επιλέξτε Έτος προς Επαναφορά:</label>
+                    <select class="form-select border-primary" id="restore_year_suffix" name="restore_year_suffix" required>
+                        <option value="">-- Επιλογή Έτους --</option>
+                        <?php foreach($availableYears as $y) { echo '<option value="'.htmlspecialchars($y).'">'.htmlspecialchars($y).'</option>'; } ?>
+                    </select>
+                </div>
+                <div class="alert alert-danger px-3 py-2 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirmRestore" required>
+                        <label class="form-check-label fw-bold" for="confirmRestore">
+                            ΠΡΟΣΟΧΗ: Η επαναφορά θα <u>ΔΙΑΓΡΑΨΕΙ οριστικά</u> όλες τις νέες εγγραφές που τυχόν έγιναν μετέπειτα!
+                        </label>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary"><i class="bi-arrow-counterclockwise"></i> Εκτέλεση Επαναφοράς</button>
+                </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ακύρωση & Κλείσιμο</button>
+      </div>
+    </div>
+  </div>
 </div>
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
@@ -618,7 +729,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 <!-- Bootstrap Font Icon CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
 
-<script src="script.js?v=<?= time() ?>" type="text/javascript"></script>
+<script src="script.js" type="text/javascript"></script>
 
 </body>
 

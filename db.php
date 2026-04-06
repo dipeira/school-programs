@@ -1,14 +1,95 @@
-<?php
 session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== 1) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+require_once('conf.php'); // Include your configuration file
+
+// ARCHIVE TABLE OPERATION
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'archive') {
+    if (!isset($_SESSION['uid']) || $_SESSION['uid'] !== 'dipeira') {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized action. Dipeira rank required.']);
+        exit;
+    }
+    
+    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    if ($mysqli->connect_error) {
+        echo json_encode(['success' => false, 'error' => 'Database connection error']);
+        exit;
+    }
+
+    $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['archive_year_suffix']);
+    if (empty($suffix)) {
+        echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
+        exit;
+    }
+    
+    $backupTableName = "progs_" . $suffix;
+    
+    // Check if table already exists
+    $check = $mysqli->query("SHOW TABLES LIKE '$backupTableName'");
+    if ($check->num_rows > 0) {
+        echo json_encode(['success' => false, 'error' => 'Archive table already exists.']);
+        exit;
+    }
+    
+    $mysqli->begin_transaction();
+    try {
+        $mysqli->query("RENAME TABLE `$prTable` TO `$backupTableName`");
+        $mysqli->query("CREATE TABLE `$prTable` LIKE `$backupTableName`");
+        $mysqli->commit();
+        echo json_encode(['success' => true]);
+    } catch(Exception $e) {
+        $mysqli->rollback();
+        echo json_encode(['success' => false, 'error' => 'Archiving failed: ' . $e->getMessage()]);
+    }
+    $mysqli->close();
     exit;
 }
-require_once('conf.php'); // Include your configuration file
+
+// RESTORE TABLE OPERATION
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'restore') {
+    if (!isset($_SESSION['uid']) || $_SESSION['uid'] !== 'dipeira') {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized action. Dipeira rank required.']);
+        exit;
+    }
+    
+    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    if ($mysqli->connect_error) {
+        echo json_encode(['success' => false, 'error' => 'Database connection error']);
+        exit;
+    }
+
+    $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['restore_year_suffix']);
+    if (empty($suffix)) {
+        echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
+        exit;
+    }
+    
+    $backupTableName = "progs_" . $suffix;
+    
+    // Check if backup table natively exists
+    $check = $mysqli->query("SHOW TABLES LIKE '$backupTableName'");
+    if ($check->num_rows === 0) {
+        echo json_encode(['success' => false, 'error' => 'Το επιλεγμένο αρχείο (' . $backupTableName . ') δεν υπάρχει!']);
+        exit;
+    }
+    
+    $mysqli->begin_transaction();
+    try {
+        $mysqli->query("DROP TABLE IF EXISTS `$prTable`"); // Physically delete current active
+        $mysqli->query("RENAME TABLE `$backupTableName` TO `$prTable`"); // Shunt backup over to master
+        $mysqli->commit();
+        echo json_encode(['success' => true]);
+    } catch(Exception $e) {
+        $mysqli->rollback();
+        echo json_encode(['success' => false, 'error' => 'Restoration failed: ' . $e->getMessage()]);
+    }
+    $mysqli->close();
+    exit;
+}
 
 // get program record
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
+    if (isset($_GET['year']) && !empty($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
+        $prTable = "progs_" . $_GET['year'];
+    }
     // Retrieve the record ID from the GET request
     $recordId = (int)$_GET['id']; // Cast to integer for safety
 
@@ -16,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     $conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
 
     // Use prepared statement to prevent SQL injection
-    $stmt = $conn->prepare("SELECT p.*, s.name as sch1name FROM $prTable p JOIN $schTable s ON p.sch1 = s.id WHERE p.id = ?");
+    $stmt = $conn->prepare("SELECT p.*, s.name as sch1name FROM `$prTable` p JOIN $schTable s ON p.sch1 = s.id WHERE p.id = ?");
     $stmt->bind_param('i', $recordId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -110,11 +191,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     $fields = array();
     $values = array();
 
-    $allowed_fields = ['sch1', 'princ1', 'sch2', 'princ2', 'nam1', 'email1', 'mob1', 'eid1', 'nam2', 'email2', 'mob2', 'eid2', 'nam3', 'email3', 'mob3', 'eid3', 'titel', 'categ', 'subti', 'praxi', 'praxidate', 'grade', 'nr', 'nr_boys', 'nr_girls', 'cha', 'arxeio', 'theme', 'goal', 'meth', 'dura', 'month', 'visit', 'foreis', 'm1', 'm2', 'm3', 'm4', 'm5', 'notes', 'chk', 'vev'];
-
     // Iterate through the posted fields and construct SQL insert fields and values
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, $allowed_fields)) continue;
         // build the SQL insert fields and values
         if ($key == 'praxidate') {
             $dateTime = DateTime::createFromFormat('d/m/Y', $value);
@@ -132,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
 
     if (count($fields) > 0 && count($values) > 0) {
         // Construct the SQL query for INSERT
-        $sql = "INSERT INTO $prTable (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $values) . ")";
+        $sql = "INSERT INTO `$prTable` (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $values) . ")";
 
         // Execute the SQL query to insert the new record
         if (mysqli_query($mysqli, $sql)) {
@@ -166,11 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     // Create an empty array to store the SQL updates
     $updates = array();
 
-    $allowed_fields = ['sch1', 'princ1', 'sch2', 'princ2', 'nam1', 'email1', 'mob1', 'eid1', 'nam2', 'email2', 'mob2', 'eid2', 'nam3', 'email3', 'mob3', 'eid3', 'titel', 'categ', 'subti', 'praxi', 'praxidate', 'grade', 'nr', 'nr_boys', 'nr_girls', 'cha', 'arxeio', 'theme', 'goal', 'meth', 'dura', 'month', 'visit', 'foreis', 'm1', 'm2', 'm3', 'm4', 'm5', 'notes', 'chk', 'vev'];
-
     // Iterate through the posted fields and construct SQL updates
     foreach ($_POST as $key => $value) {
-        if (!in_array($key, $allowed_fields)) continue;
         // Exclude the 'record_id' field and build the SET part of the SQL statement
         if ($key !== 'record_id') {
             if ($key == 'praxidate') {
@@ -188,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
 
     if (count($updates) > 0) {
         // Construct the SQL query for UPDATE
-        $sql = "UPDATE $prTable SET " . implode(', ', $updates) . " WHERE id = " . (int)$recordId;
+        $sql = "UPDATE `$prTable` SET " . implode(', ', $updates) . " WHERE id = " . (int)$recordId;
 
         // Execute the SQL query to update the record
         if (mysqli_query($mysqli, $sql)) {
@@ -220,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     }
 
     // Prepare the SQL query to delete the record
-    $sql = "DELETE FROM $prTable WHERE id = ?";
+    $sql = "DELETE FROM `$prTable` WHERE id = ?";
     $stmt = $mysqli->prepare($sql);
 
     if ($stmt) {

@@ -1,10 +1,4 @@
 <?php
-session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== 1 || !isset($_SESSION['admin']) || $_SESSION['admin'] !== 1) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
 header('Content-Type: application/json');
 
 if (!isset($_POST['configData'])) {

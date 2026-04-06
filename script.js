@@ -72,8 +72,13 @@ $(document).ready(function() {
             {
                 targets: 1,
                 className: 'noVis'
+            },
+            {
+                targets: 6,
+                type: 'num' // Force strict mathematical sorting so data-order integer isn't parsed as text
             }
         ],
+        order: [[6, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
         layout: {
             topStart: {
                 buttons: [
@@ -83,14 +88,10 @@ $(document).ready(function() {
                         popoverTitle: 'Επιλογή ορατών στηλών'
                     },
                     'excelHtml5',
-                    {
-                        extend: 'pdfHtml5',
-                        orientation: 'landscape'
-                    }
+                    'pdfHtml5'
                 ]
             }
         }
-        //order: [[1, 'asc']]
     });
 
     $('.datepicker').datepicker({
@@ -181,9 +182,10 @@ $(document).ready(function() {
         var schId = $(this).data('sch-id');
         var lockBasic = $(this).data('lock-basic');
         var isAdmin = $(this).data('admin');
+        var archiveYear = $(this).data('year'); // Dynamic routing
 
         // Use AJAX to get record details and populate the edit modal
-        $.get('db.php', { id: recordId }, function(data) { 
+        $.get('db.php', { id: recordId, year: archiveYear }, function(data) { 
             // console.log(data);
             
             $.each(data, function(key, value) {
@@ -284,6 +286,78 @@ $(document).ready(function() {
         });
     });
 
+    // Handle Archive Form Submission
+    $('#archiveForm').submit(function(event) {
+        event.preventDefault();
+        
+        if (!$('#confirmArchive').is(':checked')) {
+            showAlert('You must confirm the destructive action.', 'error');
+            return;
+        }
+
+        var formData = $(this).serialize();
+
+        $.ajax({
+            url: 'db.php',
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire(
+                        'Επιτυχία!',
+                        'H αρχειοθέτηση του έτους ολοκληρώθηκε επιτυχώς! Ο κενός πίνακας δημιουργήθηκε.',
+                        'success'
+                    ).then(() => {
+                        window.location.href = 'index.php'; // Force jump to clean table
+                    });
+                } else {
+                    Swal.fire('Σφάλμα!', response.error, 'error');
+                }
+            },
+            error: function(err) {
+                console.log(err.responseText);
+                Swal.fire('Σφάλμα!', 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.', 'error');
+            }
+        });
+    });
+
+    // Handle Restore Form Submission
+    $('#restoreForm').submit(function(event) {
+        event.preventDefault();
+        
+        if (!$('#confirmRestore').is(':checked')) {
+            showAlert('You must confirm the destructive action.', 'error');
+            return;
+        }
+
+        var formData = $(this).serialize();
+
+        $.ajax({
+            url: 'db.php',
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire(
+                        'Επιτυχία Επαναφοράς!',
+                        'Ο επιλεγμένος πίνακας αρχείου ανακτήθηκε και έγινε ξανά ο τρέχων ενεργός πίνακας!',
+                        'success'
+                    ).then(() => {
+                        window.location.href = 'index.php';
+                    });
+                } else {
+                    Swal.fire('Σφάλμα!', response.error, 'error');
+                }
+            },
+            error: function(err) {
+                console.log(err.responseText);
+                Swal.fire('Σφάλμα!', 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.', 'error');
+            }
+        });
+    });
+
     // load parameters from config.json to #configModal
     function loadConfigData() {
         // Add cache-busting parameter to prevent browser caching
@@ -369,8 +443,11 @@ $(document).ready(function() {
     // call export.php & create xlsx file with all table data
     $('#exportButton').on('click', function(event) {
         event.preventDefault();
+        var archYear = $(this).data('year');
+        var exportUrl = 'export.php' + (archYear ? '?year=' + archYear : '');
+        
         $.ajax({
-            url: 'export.php',
+            url: exportUrl,
             method: 'GET',
             success: function(response) {
                 var res = JSON.parse(response);

@@ -1,13 +1,14 @@
 <?php
-session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== 1 || !isset($_SESSION['admin']) || $_SESSION['admin'] !== 1) {
-    http_response_code(403);
-    die('Unauthorized');
-}
 require 'vendor/autoload.php'; // Include PhpSpreadsheet library
 require_once('conf.php');
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
+session_start();
+if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== 1) {
+    die("Authentication Error...");
+}
 
 // Create a new connection to the database
 $conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
@@ -17,8 +18,12 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+if (isset($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
+    $prTable = "progs_" . $_GET['year'];
+}
+
 // Fetch data from the database
-$sql = "SELECT *, p.id AS pid FROM $prTable p JOIN $schTable s ON s.id = p.sch1";
+$sql = "SELECT *, p.id AS pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1";
 $result = $conn->query($sql);
 
 // Create a new Spreadsheet object
