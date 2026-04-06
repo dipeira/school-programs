@@ -3,6 +3,18 @@
 ini_set('session.gc_maxlifetime', 7200);
 ini_set('session.cookie_lifetime', 0); // 0 means cookie expires when browser closes
 session_start();
+
+// Handle logout immediately before anything else
+if (isset($_POST['logout']) || isset($_GET['logged_out'])) {
+    session_unset();
+    session_destroy();
+    setcookie(session_name(), '', time() - 3600, '/');
+    if (isset($_POST['logout'])) {
+        header("Location: index.php?logged_out=1");
+        exit;
+    }
+}
+
 $_SESSION['loggedin'] = 0;
 require_once('conf.php');
 date_default_timezone_set('Europe/Athens');
@@ -34,7 +46,7 @@ foreach ($configData as $configItem) {
     ${$configItem['name']} = $configItem['value'];
 }
 
-if (!$prDebug) {
+if (!$prDebug || isset($_GET['logged_out'])) {
 	// if user not logged-in, display login form
 	if (!$_SESSION['loggedin'] && !isset($_POST['login-btn']) && !isset($_GET['ticket']) && !isset($_POST['logout'])):
 		?>
@@ -92,14 +104,7 @@ if (!$prDebug) {
 	require_once('vendor/autoload.php');
 	//initialize phpCAS using SAML
 	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
-	// if logout
-	if (isset($_POST['logout']))
-	{
-		session_unset();
-		session_destroy(); 
-		header("Location: index.php?logged_out=1");
-		exit;
-	}
+	
 	
 	// no SSL validation for the CAS server, only for testing environments
 	phpCAS::setNoCasServerValidation();
