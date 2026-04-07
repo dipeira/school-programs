@@ -367,17 +367,34 @@ $(document).ready(function() {
         });
     });
 
+    var metadataState = {}; // Global metadata cache for protocols
+
     // load parameters from config.json to #configModal
     function loadConfigData() {
-        // Add cache-busting parameter to prevent browser caching
+        console.log("Loading configuration data...");
+        var $general = $('#general-settings');
+        var $selectYear = $('#selectMetadataYear');
+        var $inputsDiv = $('#yearProtocolInputs');
+
+        if (!$general.length || !$selectYear.length) {
+            console.error("Critical Error: Modal tab containers not found in DOM.");
+            return;
+        }
+
+        $general.html('<p class="text-muted small">Φορτώνει...</p>');
+        $selectYear.html('<option value="">Φορτώνει...</option>');
+        $inputsDiv.addClass('d-none');
+
+        // Load General Settings
         $.ajax({
             url: "config.json",
             dataType: "json",
-            cache: false,  // Disable caching
+            cache: false,
             success: function(data) {
+                console.log("General settings loaded:", data);
+                $general.empty();
                 $.each(data, function(index, setting) {
                     var inputHtml = '';
-        
                     if (typeof setting.value === 'boolean') {
                         inputHtml = '<div class="mb-3">' +
                                         '<input class="form-check-input" type="checkbox" id="' + setting.name + '" ' + (setting.value ? 'checked' : '') + '>&nbsp;' +
@@ -389,22 +406,96 @@ $(document).ready(function() {
                                         '<input type="text" class="form-control" id="' + setting.name + '" value="' + setting.value + '">' +
                                     '</div>';
                     }
-        
-                    $('#configModal .modal-body').append(inputHtml);
+                    $general.append(inputHtml);
                 });
             },
-            error: function(xhr, status, error) {
-                console.error("Error loading configuration:", error);
-                showAlert("Σφάλμα φόρτωσης παραμέτρων.", 'danger');
+            error: function(err) {
+                console.error("Error loading config.json:", err);
+                $general.html('<p class="text-danger">Σφάλμα φόρτωσης config.json</p>');
+            }
+        });
+
+        // Load Year Metadata
+        $.ajax({
+            url: 'db.php',
+            data: { action: 'get_metadata' },
+            dataType: 'json',
+            success: function(metaData) {
+                console.log("Metadata loaded successfully:", metaData);
+                metadataState = {}; // Reset cache
+                $selectYear.empty().append('<option value="">Επιλέξτε έτος...</option>');
+                
+                var allYears = [];
+                // Get current year from hidden input
+                var cur = $('#currentSxetos').val();
+                if (cur) allYears.push(cur);
+
+                // Get archived years from the restore dropdown
+                $('#restore_year_suffix option').each(function() {
+                    var yr = $(this).val();
+                    if (yr && allYears.indexOf(yr) === -1) {
+                        allYears.push(yr);
+                    }
+                });
+
+                allYears.sort().reverse();
+
+                $.each(allYears, function(i, year) {
+                    $selectYear.append('<option value="' + year + '">' + year + '</option>');
+                    // Find existing record or create empty
+                    var record = { protocol_num: '', protocol_date: '' };
+                    for (var j = 0; j < metaData.length; j++) {
+                        if (metaData[j].year_name === year) {
+                            record = { 
+                                protocol_num: metaData[j].protocol_num || '', 
+                                protocol_date: metaData[j].protocol_date || '' 
+                            };
+                            break;
+                        }
+                    }
+                    metadataState[year] = record;
+                });
+                
+                if (allYears.length === 0) {
+                    $selectYear.html('<option value="">Δεν βρέθηκαν έτη</option>');
+                }
+            },
+            error: function(err) {
+                console.error("Error loading metadata from db.php:", err);
+                $selectYear.html('<option value="">Σφάλμα φόρτωσης</option>');
             }
         });
     }
 
+    // Change listener for year selector
+    $(document).on('change', '#selectMetadataYear', function() {
+        var year = $(this).val();
+        var $inputsDiv = $('#yearProtocolInputs');
+        if (year && metadataState[year]) {
+            $('#meta_p_num').val(metadataState[year].protocol_num);
+            $('#meta_p_date').val(metadataState[year].protocol_date);
+            $inputsDiv.removeClass('d-none');
+        } else {
+            $inputsDiv.addClass('d-none');
+        }
+    });
+
+    // Input listeners to update cache
+    $(document).on('input', '#meta_p_num, #meta_p_date', function() {
+        var year = $('#selectMetadataYear').val();
+        if (year && metadataState[year]) {
+            metadataState[year].protocol_num = $('#meta_p_num').val();
+            metadataState[year].protocol_date = $('#meta_p_date').val();
+        }
+    });
+
     // save parameters from modal to file
     function saveConfigData() {
         var configData = [];
+        var yearMetadata = [];
     
-        $('#configModal .modal-body input').each(function() {
+        // Collect General Settings
+        $('#general-settings input').each(function() {
             var name = $(this).attr('id');
             var description = $(this).closest('.mb-3').find('label').text();
             var value = $(this).is(':checkbox') ? $(this).prop('checked') : $(this).val();
@@ -415,8 +506,17 @@ $(document).ready(function() {
                 value: value
             });
         });
-        // console.log(configData);
+
+        // Collect Year Protocols from Cache
+        for (var year in metadataState) {
+            yearMetadata.push({
+                year_name: year,
+                protocol_num: metadataState[year].protocol_num,
+                protocol_date: metadataState[year].protocol_date
+            });
+        }
     
+        // Save General Settings
         $.ajax({
             type: "POST",
             url: "save_config.php",
@@ -424,23 +524,33 @@ $(document).ready(function() {
             dataType: "json",
             success: function(response) {
                 if (response.success) {
-                    showAlert("Επιτυχής αποθήκευση παραμέτρων!", 'success');
-                    $('#configModal').modal('hide');
+                    // Save Year Metadata if successful
+                    $.ajax({
+                        type: "POST",
+                        url: "db.php",
+                        data: { 
+                            action: 'save_metadata', 
+                            metadata: JSON.stringify(yearMetadata) 
+                        },
+                        dataType: "json",
+                        success: function(res) {
+                            if (res.success) {
+                                showAlert("Επιτυχής αποθήκευση παραμέτρων!", 'success');
+                                $('#configModal').modal('hide');
+                            } else {
+                                showAlert("Σφάλμα αποθήκευσης πρωτοκόλλων.", 'danger');
+                            }
+                        }
+                    });
                 } else {
-                    console.error("Error saving configuration:", response.error);
-                    showAlert("Σφάλμα αποθήκευσης παραμέτρων: " + response.error, 'danger');
+                    showAlert("Σφάλμα αποθήκευσης παραμέτρων.", 'danger');
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error("Error saving configuration:", error);
-                showAlert("Σφάλμα αποθήκευσης παραμέτρων. Παρακαλώ δοκιμάστε ξανά...", 'danger');
             }
         });
     }
 
     // Load configuration data when the modal is shown
     $('#configModal').on('shown.bs.modal', function() {
-        $('#configModal .modal-body').empty(); // Clear previous content
         loadConfigData(); // Load configuration data
     });
 
@@ -470,10 +580,78 @@ $(document).ready(function() {
         });
     });
 
-    // Refresh the page when the modal is closed
-    // $('#editModal').on('hidden.bs.modal', function () {
-    //     location.reload();
-    // });
+    // Refresh the page when the modal is closed to sync table
+    $('#editModal').on('hidden.bs.modal', function () {
+        if (!$('.print-btn').hasClass('d-none')) {
+            location.reload();
+        }
+    });
+
+    // Print Program Handler - Generates A4 printable version of all modal tabs
+    $('#printProgramBtn').on('click', function() {
+        var printContents = "";
+        var schoolName = $('#sch_name').val() || "Σχολείο";
+        var programTitle = $('#titel').val() || "Πρόγραμμα";
+
+        printContents += "<div id='print-area' style='padding: 20px; font-family: sans-serif;'>";
+        printContents += "<div style='text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px;'>";
+        printContents += "<h2>Σχέδιο Προγράμματος Σχολικών Δραστηριοτήτων</h2>";
+        printContents += "<h4>" + schoolName + "</h4>";
+        printContents += "</div>";
+
+        $('#editForm .tab-pane').each(function() {
+            var tabId = $(this).attr('id');
+            var tabLabel = $("a[href='#" + tabId + "']").text().trim();
+            
+            printContents += "<div style='margin-bottom: 20px;'>";
+            printContents += "<h3 style='background: #f0f0f0; padding: 5px; border-left: 5px solid #333;'>" + tabLabel + "</h3>";
+            
+            $(this).find('div.form-group, div.mb-3').each(function() {
+                var labelText = $(this).find('label').text().trim();
+                var $input = $(this).find('input, textarea, select');
+                var val = "";
+
+                if ($input.is('select')) {
+                    val = $input.find('option:selected').text();
+                } else {
+                    val = $input.val();
+                }
+
+                if (labelText && val && val !== "0" && val !== "") {
+                    printContents += "<div style='margin: 8px 0; border-bottom: 1px dotted #ccc; padding-bottom: 3px;'>";
+                    printContents += "<strong>" + labelText + ":</strong> <span style='margin-left: 10px;'>" + val + "</span>";
+                    printContents += "</div>";
+                }
+            });
+            printContents += "</div>";
+        });
+        printContents += "<div style='margin-top: 30px; text-align: right; font-style: italic; font-size: 0.8em;'>Ημερομηνία Εκτύπωσης: " + new Date().toLocaleString() + "</div>";
+        printContents += "</div>";
+
+        var printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Εκτύπωση Προγράμματος</title>');
+        printWindow.document.write('<style>@media print { @page { size: A4; margin: 2cm; } body { font-family: Arial, sans-serif; } #print-area { width: 100%; } h2 { color: #000; } h3 { font-size: 1.2em; page-break-after: avoid; } .form-group { margin-bottom: 10px; } } </style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(printContents);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        
+        setTimeout(function() {
+            printWindow.print();
+        }, 300);
+    });
+
+    // If URL has 'year' parameter, disable 'Add' button and edit link logic for history
+    var urlParams = new URLSearchParams(window.location.search);
+    var isAdmin = $('#isAdmin').val() === '1';
     
-  
+    if (urlParams.has('year')) {
+        // Hide only specific data-modifying actions in archives
+        $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
+        
+        // Hide certificates ONLY for non-admins in archives
+        if (!isAdmin) {
+            $('.btn-vev').addClass('d-none');
+        }
+    }
 });

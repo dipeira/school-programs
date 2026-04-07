@@ -270,7 +270,7 @@ else {
 								    echo '" data-lock-basic="'.$lockBasic.'" data-admin="'.$_SESSION['admin'].'"><span class="bi-pencil-square"></span>&nbsp;Επεξεργασία</a>';
                                 } else { echo '<td>'; }
 								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'" data-year="'.$archData.'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
-								echo ($showVev && !$isArchive) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
+								echo (($showVev && !$isArchive) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
 								if (!$isArchive) echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
 								echo '</td>';
                 echo '</tr>';
@@ -286,14 +286,14 @@ else {
 				echo '<div class="d-flex flex-wrap gap-2 align-items-center">';
 				if ($_SESSION['admin']){
 					echo "<!-- Button to open the modal -->";
-					echo '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
+					echo '<button type="button" class="btn btn-primary" id="btnConfig" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
 					echo '<button type="button" class="btn btn-success" id="exportButton" data-year="'.(isset($_GET['year'])?$_GET['year']:'').'"><span class="bi bi-file-earmark-excel"></span>&nbsp;Εξαγωγή σε Excel</button>';
                     if ($_SESSION['uid'] === 'dipeira' || $_SESSION['uid'] === 'taypeira') {
-                        echo '<button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#archiveModal"><span class="bi-archive"></span>&nbsp;Διαχείριση Έτους</button>';
+                        echo '<button type="button" class="btn btn-danger" id="btnAdminYear" data-bs-toggle="modal" data-bs-target="#archiveModal"><span class="bi-archive"></span>&nbsp;Διαχείριση Έτους</button>';
                     }
     			//Open Configuration Modal
 				}
-				echo '<button type="submit" class="btn btn-danger" name="logout"><span class="bi-box-arrow-right"></span>&nbsp;Έξοδος</button>';
+				echo '<button type="submit" class="btn btn-danger" id="btnLogout" name="logout"><span class="bi-box-arrow-right"></span>&nbsp;Έξοδος</button>';
 				echo '</div>';
 				echo '</form>';
 				echo "</div>";
@@ -734,7 +734,8 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 <!-- Bootstrap Font Icon CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
 
-<script src="script.js" type="text/javascript"></script>
+<input type="hidden" id="isAdmin" value="<?php echo $_SESSION['admin'] ? '1' : '0'; ?>">
+<script src="script.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
 </body>
 
