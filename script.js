@@ -433,7 +433,8 @@ $(document).ready(function() {
                 // Get archived years from the restore dropdown
                 $('#restore_year_suffix option').each(function() {
                     var yr = $(this).val();
-                    if (yr && allYears.indexOf(yr) === -1) {
+                    // Regex check for YYYY-YY format
+                    if (yr && /^\d{4}-\d{2}$/.test(yr) && allYears.indexOf(yr) === -1) {
                         allYears.push(yr);
                     }
                 });

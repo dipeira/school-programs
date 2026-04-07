@@ -127,7 +127,11 @@ if ($conn->connect_error) {
     $tableQuery = $conn->query("SHOW TABLES LIKE 'progs\_%'");
     if ($tableQuery) {
         while ($t = $tableQuery->fetch_array()) {
-            $availableYears[] = str_replace('progs_', '', $t[0]);
+            $year = str_replace('progs_', '', $t[0]);
+            // Only add if it matches YYYY-YY format (e.g. 2024-25)
+            if (preg_match('/^\d{4}-\d{2}$/', $year)) {
+                $availableYears[] = $year;
+            }
         }
     }
     if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
