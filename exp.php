@@ -48,9 +48,22 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Load current school year from config.json
+$jsonString = file_get_contents('config.json');
+$configData = json_decode($jsonString, true);
+$currentYear = '';
+if ($configData) {
+    foreach ($configData as $item) {
+        if ($item['name'] === 'prSxetos') {
+            $currentYear = $item['value'];
+            break;
+        }
+    }
+}
+
 // Use prepared statement to prevent SQL injection
 $prTable = 'progs';
-$prSxetos = '';
+$prSxetos = $currentYear;
 if (isset($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
     $prTable = "progs_" . $_GET['year'];
     $prSxetos = $_GET['year'];
