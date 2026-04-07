@@ -79,3 +79,16 @@ ALTER TABLE `progs`
 --
 ALTER TABLE `progs`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Table structure for table `progs_metadata`
+--
+
+CREATE TABLE `progs_metadata` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `year_name` varchar(10) DEFAULT NULL,
+  `protocol` varchar(50) DEFAULT NULL,
+  `protocol_date` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `year_name` (`year_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
