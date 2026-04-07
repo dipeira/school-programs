@@ -1,43 +1,37 @@
-Διαχείριση Προγραμμάτων Σχολικών Δραστηριοτήτων
-===================
+# School Management Portal - Activity Programs
 
-Βαγγέλης Ζαχαριουδάκης, ΠΕ86
-Πληροφορίες: sugarv@sch.gr
-(c) 2024
+A modernized, year-aware school management system for handling activity programs, certificate generation, and annual archiving.
 
-Το σύστημα Διαχείρισης Σχολικών Δραστηριοτήτων αποτελεί ένα εύκολο & ολοκληρωμένο τρόπο υποβολής, ελέγχου, επικαιροποίησης και παρακολούθησης προγραμμάτων σχολικών δραστηριοτήτων Δ/νσης Εκπαίδευσης.
-Με τη χρήση του, 
-- εκλείπει η ανάγκη συνεχούς αλληλογραφίας με την υπηρεσία, 
-- δίνεται η δυνατότητα υποβολής/διόρθωσης όλο το 24ωρο.
+## Features
+- **SSO Integration**: Authenticates users via the Greek School Network (phpCAS).
+- **Year-Aware Metadata**: Dedicated management of protocol numbers and dates for each school year.
+- **Automated Year Rollover**: Features for archiving active programs and generating metadata placeholders for future years.
+- **Certificate Engine**: Generates Word documents (.docx) from templates with dynamic placeholder injection (`${protocol}`, `${protocol_date}`, `${sxetos}`).
+- **High-Fidelity Printing**: Custom A4 print engine for program summaries.
+- **DataTables Dashboard**: Advanced sorting, filtering, and export capabilities (Excel/PDF).
 
-Επιπλέον, επέχει θέση υπεύθυνης δήλωσης από το Δ/ντή - Πρ/νο της σχολικής μονάδας, διότι η είσοδος σε αυτό γίνεται μέσω του επίσημου λογαριασμού της μονάδας στο Πανελλήνιο Σχολικό Δίκτυο (www.sch.gr).
+## Tech Stack
+- **Backend**: PHP 8.x, MySQL (MariaDB).
+- **Frontend**: Bootstrap 5, jQuery, DataTables.net, Select2, SweetAlert2.
+- **Libraries**: 
+  - `PHPOffice/PHPWord` for document manipulation.
+  - `phpCAS` for authentication.
 
-Αναπτύσσεται εξ'ολοκλήρου με εργαλεία ανοιχτού λογισμικού (βλ. παρακάτω).
+## Installation
+1.  Clone the repository to your `htdocs` directory.
+2.  Install dependencies: `composer install`.
+3.  Import `files/progs.sql` and `files/schools.sql` into your database.
+4.  Configure `conf.php` with your database credentials.
+5.  Set your CAS server parameters in `index.php`.
 
+## Project Structure
+- `index.php`: Main dashboard and routing.
+- `db.php`: Backend logic for data persistence and metadata management.
+- `exp.php`: Certificate generation engine.
+- `script.js`: Frontend logic, UI interactions, and A4 print engine.
+- `files/`: Contains SQL schemas, Word templates, and generated files.
+- `vendor/`: Composer dependencies.
 
-Οδηγίες
---------
-1. Δημιουργία των πίνακων με βάση τα sql αρχείο που βρίσκονται στο φάκελο files (αφού γίνει έλεγχος & τροποποίηση των πεδίων τύπου enum).
-2. Τροποποίηση του conf.php.
-3. Εκτέλεση του [composer](https://getcomposer.org/) για εγκατάσταση των απαραίτητων βιβλιοθηκών.
-4. Συνεννόηση με τους διαχειριστές του ΠΣΔ για χρήση της υπηρεσίας CAS με την εφαρμογή
-5. Ανέβασμα αρχείων και έναρξη λειτουργίας.
-
-
-Εργαλεία που χρησιμοποιήθηκαν / Tools used:
----------------------------
-- Bootstrap (https://getbootstrap.com/)
-- PHPWord (https://github.com/PHPOffice/PHPWord)
-- phpCAS (https://github.com/Jasig/phpCAS)
-- jQuery (https://jquery.com/)
-- MySQL (https://www.mysql.com/)
-
-
-----------
-
-School program applications management
-====================
-
-An easy way to insert, update and view school program applications.
-
-Authenticates schools via sch.gr's CAS server and gives the ability to submit, edit and export school program applications 24/7, eliminating the need for constant communication with the administration.
+## Manuals
+- [User Manual (Greek)](USER_MANUAL.md) - For school units.
+- [Admin Manual (Greek)](ADMIN_MANUAL.md) - For DIPE administrators.
