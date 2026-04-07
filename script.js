@@ -427,15 +427,10 @@ $(document).ready(function() {
                 
                 var allYears = [];
                 // Get current year from hidden input
-                var cur = $('#currentSxetos').val();
-                if (cur) allYears.push(cur);
-
-                // Get archived years from the restore dropdown
-                $('#restore_year_suffix option').each(function() {
-                    var yr = $(this).val();
-                    // Regex check for YYYY-YY format
-                    if (yr && /^\d{4}-\d{2}$/.test(yr) && allYears.indexOf(yr) === -1) {
-                        allYears.push(yr);
+                // Sync with Metadata table (Source of Truth)
+                $.each(metaData, function(i, meta) {
+                    if (meta.year_name && allYears.indexOf(meta.year_name) === -1) {
+                        allYears.push(meta.year_name);
                     }
                 });
 
