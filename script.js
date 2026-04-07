@@ -443,11 +443,11 @@ $(document).ready(function() {
                 $.each(allYears, function(i, year) {
                     $selectYear.append('<option value="' + year + '">' + year + '</option>');
                     // Find existing record or create empty
-                    var record = { protocol_num: '', protocol_date: '' };
+                    var record = { protocol: '', protocol_date: '' };
                     for (var j = 0; j < metaData.length; j++) {
                         if (metaData[j].year_name === year) {
                             record = { 
-                                protocol_num: metaData[j].protocol_num || '', 
+                                protocol: metaData[j].protocol || '', 
                                 protocol_date: metaData[j].protocol_date || '' 
                             };
                             break;
@@ -472,7 +472,7 @@ $(document).ready(function() {
         var year = $(this).val();
         var $inputsDiv = $('#yearProtocolInputs');
         if (year && metadataState[year]) {
-            $('#meta_p_num').val(metadataState[year].protocol_num);
+            $('#meta_p_num').val(metadataState[year].protocol);
             $('#meta_p_date').val(metadataState[year].protocol_date);
             $inputsDiv.removeClass('d-none');
         } else {
@@ -484,7 +484,7 @@ $(document).ready(function() {
     $(document).on('input', '#meta_p_num, #meta_p_date', function() {
         var year = $('#selectMetadataYear').val();
         if (year && metadataState[year]) {
-            metadataState[year].protocol_num = $('#meta_p_num').val();
+            metadataState[year].protocol = $('#meta_p_num').val();
             metadataState[year].protocol_date = $('#meta_p_date').val();
         }
     });
@@ -511,7 +511,7 @@ $(document).ready(function() {
         for (var year in metadataState) {
             yearMetadata.push({
                 year_name: year,
-                protocol_num: metadataState[year].protocol_num,
+                protocol: metadataState[year].protocol,
                 protocol_date: metadataState[year].protocol_date
             });
         }

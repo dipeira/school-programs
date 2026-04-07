@@ -2,6 +2,53 @@
 session_start();
 require_once('conf.php'); // Include your configuration file
 
+// GET YEAR METADATA
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_metadata') {
+    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $result = $mysqli->query("SELECT * FROM progs_metadata");
+    $meta = [];
+    while ($row = $result->fetch_assoc()) {
+        $meta[] = $row;
+    }
+    echo json_encode($meta);
+    if (isset($mysqli)) $mysqli->close();
+    exit;
+}
+
+// SAVE YEAR METADATA
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_metadata') {
+    if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized action.']);
+        exit;
+    }
+    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $metadata = json_decode($_POST['metadata'], true);
+    
+    $mysqli->begin_transaction();
+    try {
+        foreach ($metadata as $record) {
+            $year = $mysqli->real_escape_string($record['year_name']);
+            $protocol = $mysqli->real_escape_string($record['protocol']);
+            $p_date = $mysqli->real_escape_string($record['protocol_date']);
+            
+            // Handle date conversion if needed or NULL if empty
+            $mysql_date = !empty($p_date) ? "'" . $mysqli->real_escape_string($p_date) . "'" : "NULL";
+
+            $sql = "INSERT INTO progs_metadata (year_name, protocol, protocol_date) 
+                    VALUES ('$year', '$protocol', $mysql_date) 
+                    ON DUPLICATE KEY UPDATE protocol='$protocol', protocol_date=$mysql_date";
+            $mysqli->query($sql);
+        }
+        $mysqli->commit();
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    if (isset($mysqli)) $mysqli->close();
+    exit;
+}
+
 // ARCHIVE TABLE OPERATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'archive') {
     if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {

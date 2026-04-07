@@ -69,12 +69,13 @@ $rec['sxetos'] = $prSxetos; // Add year to template data
 $stmt->close();
 
 // Fetch Year Metadata (Protocol Num/Date)
-$stmtMeta = $conn->prepare("SELECT protocol_num, protocol_date FROM progs_metadata WHERE year_name = ?");
+$stmtMeta = $conn->prepare("SELECT protocol, protocol_date FROM progs_metadata WHERE year_name = ?");
 $stmtMeta->bind_param('s', $prSxetos);
 $stmtMeta->execute();
 $metaRes = $stmtMeta->get_result();
 $meta = $metaRes->fetch_assoc();
-$rec['protocol_num'] = $meta['protocol_num'] ?? '';
+$rec['protocol'] = $meta['protocol'] ?? '';
+$rec['protocol_num'] = $meta['protocol'] ?? ''; // Compatibility
 $rec['protocol_date'] = $meta['protocol_date'] ?? '';
 $stmtMeta->close();
 

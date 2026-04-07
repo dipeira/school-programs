@@ -705,9 +705,47 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <!-- Configuration settings will be dynamically loaded here -->
+        <!-- Tabs Nav -->
+        <ul class="nav nav-tabs mb-3" id="configTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-settings" type="button" role="tab">Γενικά</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata-settings" type="button" role="tab">Πρωτόκολλα/Ημερομηνίες</button>
+          </li>
+        </ul>
+        
+        <!-- Tabs Content -->
+        <div class="tab-content" id="configTabsContent">
+          <!-- General Settings Tab -->
+          <div class="tab-pane fade show active" id="general-settings" role="tabpanel">
+            <p class="text-muted small">Φορτώνει ρυθμίσεις...</p>
+          </div>
+          
+          <!-- Metadata Tab -->
+          <div class="tab-pane fade" id="metadata-settings" role="tabpanel">
+            <div class="mb-3">
+              <label for="selectMetadataYear" class="form-label fw-bold">Επιλογή Σχολικού Έτους</label>
+              <select class="form-select" id="selectMetadataYear">
+                <option value="">Φορτώνει έτη...</option>
+              </select>
+            </div>
+            <hr>
+            <div id="yearProtocolInputs" class="d-none">
+              <div class="mb-3">
+                <label for="meta_p_num" class="form-label">Αρ. Πρωτοκόλλου</label>
+                <input type="text" class="form-control" id="meta_p_num">
+              </div>
+              <div class="mb-3">
+                <label for="meta_p_date" class="form-label">Ημερομηνία Πρωτοκόλλου</label>
+                <input type="date" class="form-control" id="meta_p_date">
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
+        <input type="hidden" id="currentSxetos" value="<?php echo $prSxetos; ?>">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi-x-circle"></i>&nbsp;Κλείσιμο</button>&nbsp;
         <button type="button" class="btn btn-primary" id="saveConfigBtn"><i class="bi-save"></i>&nbsp;Αποθήκευση</button>
       </div>
