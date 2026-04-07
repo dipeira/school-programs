@@ -490,6 +490,47 @@ $(document).ready(function() {
         }
     });
 
+    // Create New Year Button logic
+    $(document).on('click', '#btnCreateNextYear', function() {
+        var years = Object.keys(metadataState).filter(function(y) { 
+            return /^\d{4}-\d{2}$/.test(y); 
+        });
+        
+        if (years.length === 0) {
+            alert("Δεν βρέθηκαν υπάρχοντα έτη για υπολογισμό του επόμενου.");
+            return;
+        }
+
+        years.sort().reverse();
+        var maxYear = years[0]; // e.g. "2025-26"
+        
+        var parts = maxYear.split('-');
+        if (parts.length !== 2) return;
+
+        var nextPart1 = parseInt(parts[0]) + 1;
+        var nextPart2 = parseInt(parts[1]) + 1;
+        // Pad suffix if needed (26 -> 27)
+        var suffixStr = nextPart2.toString().padStart(2, '0');
+        var nextYear = nextPart1 + '-' + suffixStr;
+
+        if (metadataState[nextYear]) {
+            alert("Το έτος " + nextYear + " υπάρχει ήδη.");
+            $('#selectMetadataYear').val(nextYear).trigger('change');
+            return;
+        }
+
+        // Add to state
+        metadataState[nextYear] = { protocol: '', protocol_date: '' };
+        
+        // Update dropdown
+        var $selectYear = $('#selectMetadataYear');
+        // Add at the top (after sorts)
+        $selectYear.prepend('<option value="' + nextYear + '">' + nextYear + '</option>');
+        $selectYear.val(nextYear).trigger('change');
+        
+        console.log("Created next year entries for:", nextYear);
+    });
+
     // save parameters from modal to file
     function saveConfigData() {
         var configData = [];

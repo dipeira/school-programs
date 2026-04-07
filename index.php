@@ -730,9 +730,14 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
           <div class="tab-pane fade" id="metadata-settings" role="tabpanel">
             <div class="mb-3">
               <label for="selectMetadataYear" class="form-label fw-bold">Επιλογή Σχολικού Έτους</label>
-              <select class="form-select" id="selectMetadataYear">
-                <option value="">Φορτώνει έτη...</option>
-              </select>
+              <div class="input-group">
+                <select class="form-select" id="selectMetadataYear">
+                  <option value="">Φορτώνει έτη...</option>
+                </select>
+                <button type="button" id="btnCreateNextYear" class="btn btn-outline-success">
+                  <i class="bi bi-plus-circle"></i> Νέο Έτος
+                </button>
+              </div>
             </div>
             <hr>
             <div id="yearProtocolInputs" class="d-none">
