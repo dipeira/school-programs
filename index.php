@@ -274,7 +274,8 @@ else {
 								    echo '" data-lock-basic="'.$lockBasic.'" data-admin="'.$_SESSION['admin'].'"><span class="bi-pencil-square"></span>&nbsp;Επεξεργασία</a>';
                                 } else { echo '<td>'; }
 								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'" data-year="'.$archData.'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
-								echo (($showVev && !$isArchive) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
+                                $vevDisabled = ($row['vev'] === 'Ναι') ? '' : ' disabled';
+								echo (($showVev && !$isArchive) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev'.$vevDisabled.'" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
 								if (!$isArchive) echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
 								echo '</td>';
                 echo '</tr>';
