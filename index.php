@@ -59,51 +59,127 @@ if (!$prDebug) {
 	if (!$isAuthenticated && !isset($_POST['login-btn'])):
 		?>
 	<!DOCTYPE html>
-		<html lang="en">
+		<html lang="el">
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Είσοδος</title>
-				<!-- Bootstrap CSS -->
-				<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+				<title>Είσοδος - Προγράμματα Σχολικών Δραστηριοτήτων</title>
+				<!-- Bootstrap CSS & Icons -->
+				<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+                <!-- Google Fonts -->
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 				<style>
-					.jumbotron {
-						background-color: #f8f9fa;
-					}
+                    body {
+                        font-family: 'Inter', sans-serif;
+                        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+                        min-height: 100vh;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .login-container {
+                        flex: 1;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .login-card {
+                        background: #ffffff;
+                        border-radius: 16px;
+                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+                        padding: 3.5rem 2.5rem;
+                        max-width: 480px;
+                        width: 100%;
+                        text-align: center;
+                        border: 1px solid rgba(0,0,0,0.05);
+                    }
+                    .login-icon {
+                        font-size: 3.5rem;
+                        color: #0d6efd;
+                        margin-bottom: 1rem;
+                    }
+                    .title {
+                        font-weight: 700;
+                        color: #2b3440;
+                        font-size: 1.6rem;
+                        line-height: 1.3;
+                        margin-bottom: 0.5rem;
+                    }
+                    .subtitle {
+                        color: #6c757d;
+                        font-size: 0.95rem;
+                        margin-bottom: 2rem;
+                    }
+                    .btn-login {
+                        padding: 0.8rem 1.5rem;
+                        font-weight: 600;
+                        border-radius: 8px;
+                        font-size: 1.05rem;
+                        transition: all 0.3s ease;
+                        background-color: #0d6efd;
+                    }
+                    .btn-login:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
+                        background-color: #0b5ed7;
+                    }
+                    .info-text {
+                        font-size: 0.85rem;
+                        color: #8fa0b5;
+                        margin-top: 1.5rem;
+                        line-height: 1.4;
+                    }
+                    .footer {
+                        padding: 1.5rem 0;
+                        background: transparent;
+                        text-align: center;
+                        color: #7a8b9e;
+                        font-size: 0.85rem;
+                    }
+                    .footer a {
+                        color: #7a8b9e;
+                        text-decoration: none;
+                        transition: color 0.2s;
+                    }
+                    .footer a:hover {
+                        color: #0d6efd;
+                    }
+                    .github-icon {
+                        font-size: 1.2rem;
+                    }
 				</style>
 			</head>
 			
 			<body>
-				<div class="container mt-5">
-					<div class="p-4 shadow-4 rounded-3" style="background-color: hsl(0, 0%, 94%);">
-						<h1>Προγράμματα Σχολικών Δραστηριοτήτων <?=$prSxetos?></h1>
-						<p>
-							Εισαγωγή, διαχείριση, έγκριση προγραμμάτων σχολικών δραστηριοτήτων
+				<div class="login-container px-3">
+					<div class="login-card">
+                        <i class="bi bi-journal-bookmark-fill login-icon"></i>
+						<h1 class="title">Προγράμματα<br>Σχολικών Δραστηριοτήτων</h1>
+                        <span class="badge bg-primary mb-3 py-2 px-3 fw-medium">Έτος <?=$prSxetos?></span>
+						<p class="subtitle">
+							Σύστημα ελέγχου, διαχείρισης και αυτόματης έκδοσης βεβαιώσεων
 						</p>
 
-  					<hr class="my-4" />
-
-						<p>
-						Η είσοδος στο σύστημα γίνεται με κωδικούς ΠΣΔ (Πανελληνίου Σχολικού Δικτύου - <u>κωδικοί email</u>) και ΟΧΙ με κωδικούς MySchool
-						</p>
 						<form id="login" method="post">
-							<button type="submit" data-mdb-button-init data-mdb-ripple-init class="btn btn-primary" name="login-btn">
-								Είσοδος με κωδικούς ΠΣΔ  
+							<button type="submit" class="btn btn-primary w-100 btn-login" name="login-btn">
+								<i class="bi bi-box-arrow-in-right me-2"></i>Είσοδος μέσω Π.Σ.Δ.
 							</button>
 						</form>
+
+                        <div class="info-text">
+						    <i class="bi bi-info-circle me-1"></i>Η είσοδος γίνεται με κωδικούς μονάδας (ΠΣΔ).<br>
+                            ΟΧΙ με προσωπικούς κωδικούς ή MySchool.
+						</div>
 					</div>
 				</div>
 
 				<footer class="footer">
-					<div class="container">
-						<div class="row">
-							<div class="col-md-10">
-								<span>&copy; ΔΙ.Π.Ε. Ηρακλείου - Τμήμα Δ' Πληροφορικής & νέων Τεχνολογιών, 2024</span>
-							</div>	
-							<div class="col-md-2">
-								<a href="https://github.com/dipeira/sch-progs" target="_blank" title="Github"><img src="files/github.png"></a>
-							</div>
-						</div>
+					<div class="container d-flex justify-content-center align-items-center gap-2">
+                        <span>&copy; <?= date("Y") ?> ΔΙ.Π.Ε. Ηρακλείου - Τμήμα Δ' Πληροφορικής</span>
+                        <span>|</span>
+                        <a href="https://github.com/dipeira/school-programs" target="_blank" title="Πηγαίος Κώδικας στο Github" class="github-icon">
+                            <i class="bi bi-github"></i>
+                        </a>
 					</div>
 				</footer>
 			</body>
