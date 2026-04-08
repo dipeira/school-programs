@@ -2,7 +2,7 @@ CREATE DATABASE IF NOT EXISTS `school-programs`;
 USE `school-programs`;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "Europe/Athens";
+SET time_zone = "+00:00";
 
 --
 -- Table structure for table `progs`
