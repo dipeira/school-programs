@@ -36,11 +36,27 @@ foreach ($configData as $configItem) {
 }
 
 if (!$prDebug) {
-    if (isset($_GET['ticket'])) {
-        $_SESSION['cas_ticket_processing'] = true;
-    }
-	// if user not logged-in, display login form
-	if (empty($_SESSION['loggedin']) && !isset($_POST['login-btn']) && empty($_GET['ticket']) && empty($_SESSION['cas_ticket_processing']) && !isset($_POST['logout'])):
+	// Initialize phpCAS early
+	require_once('vendor/autoload.php');
+	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
+	
+	// Handle logout
+	if (isset($_POST['logout'])) {
+		session_unset();
+		session_destroy(); 
+		phpCAS::logout();
+		header("Location: index.php");
+        exit;
+	}
+	
+	phpCAS::setNoCasServerValidation();
+	phpCAS::handleLogoutRequests(array('sso-test.sch.gr'));
+
+    // Check authentication. This transparently handles tickets and valid CAS redirects!
+    $isAuthenticated = phpCAS::isAuthenticated();
+
+	// if user not logged-in and hasn't pressed the login button, display login form
+	if (!$isAuthenticated && !isset($_POST['login-btn'])):
 		?>
 	<!DOCTYPE html>
 		<html lang="en">
@@ -95,32 +111,14 @@ if (!$prDebug) {
 	<?php
 	die();
 	endif;
-	// Add your CAS server integration here
-	// phpCAS simple client, import phpCAS lib (downloaded with composer)
-	require_once('vendor/autoload.php');
 
-	//initialize phpCAS using SAML
-	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
-	// if logout
-	if (isset($_POST['logout']))
-	{
-		session_unset();
-		session_destroy(); 
-		phpCAS::logout();
-		header("Location: index.php");
-	}
-	
-	// no SSL validation for the CAS server, only for testing environments
-	phpCAS::setNoCasServerValidation();
-	// handle backend logout requests from CAS server
-	phpCAS::handleLogoutRequests(array('sso-test.sch.gr'));
-	// force CAS authentication
-	if (!phpCAS::checkAuthentication()) {
-	  phpCAS::forceAuthentication();
+	// force CAS authentication if button was pressed but not authenticated
+	if (!$isAuthenticated) {
+	    phpCAS::forceAuthentication();
     }
-	// at this step, the user has been authenticated by the CAS server and the user's login name can be read with phpCAS::getUser().
+
+	// at this step, the user has been authenticated by the CAS server
 	$_SESSION['loggedin'] = 1;
-    unset($_SESSION['cas_ticket_processing']);
 } else {
     $_SESSION['loggedin'] = 1;
 }
