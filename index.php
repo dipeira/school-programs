@@ -3,7 +3,9 @@
 ini_set('session.gc_maxlifetime', 7200);
 ini_set('session.cookie_lifetime', 0); // 0 means cookie expires when browser closes
 session_start();
-$_SESSION['loggedin'] = 0;
+if (!isset($_SESSION['loggedin'])) {
+    $_SESSION['loggedin'] = 0;
+}
 require_once('conf.php');
 date_default_timezone_set('Europe/Athens');
 
@@ -34,8 +36,11 @@ foreach ($configData as $configItem) {
 }
 
 if (!$prDebug) {
+    if (isset($_GET['ticket'])) {
+        $_SESSION['cas_ticket_processing'] = true;
+    }
 	// if user not logged-in, display login form
-	if (!$_SESSION['loggedin'] && !isset($_POST['login-btn']) && !$_GET['ticket'] && !isset($_POST['logout'])):
+	if (empty($_SESSION['loggedin']) && !isset($_POST['login-btn']) && empty($_GET['ticket']) && empty($_SESSION['cas_ticket_processing']) && !isset($_POST['logout'])):
 		?>
 	<!DOCTYPE html>
 		<html lang="en">
@@ -110,10 +115,12 @@ if (!$prDebug) {
 	// handle backend logout requests from CAS server
 	phpCAS::handleLogoutRequests(array('sso-test.sch.gr'));
 	// force CAS authentication
-	if (!phpCAS::checkAuthentication())
+	if (!phpCAS::checkAuthentication()) {
 	  phpCAS::forceAuthentication();
+    }
 	// at this step, the user has been authenticated by the CAS server and the user's login name can be read with phpCAS::getUser().
 	$_SESSION['loggedin'] = 1;
+    unset($_SESSION['cas_ticket_processing']);
 } else {
     $_SESSION['loggedin'] = 1;
 }
