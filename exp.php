@@ -89,7 +89,8 @@ $metaRes = $stmtMeta->get_result();
 $meta = $metaRes->fetch_assoc();
 $rec['protocol'] = $meta['protocol'] ?? '';
 $rec['protocol_num'] = $meta['protocol'] ?? ''; // Compatibility
-$rec['protocol_date'] = $meta['protocol_date'] ?? '';
+$p_date_raw = $meta['protocol_date'] ?? '';
+$rec['protocol_date'] = ($p_date_raw && $p_date_raw !== '0000-00-00') ? date('d/m/Y', strtotime($p_date_raw)) : '';
 $stmtMeta->close();
 
 // Check if the user is allowed to view the program
