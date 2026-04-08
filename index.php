@@ -842,6 +842,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
       </div>
       <div class="modal-footer">
         <input type="hidden" id="currentSxetos" value="<?php echo $prSxetos; ?>">
+        <input type="hidden" id="availableYearsHidden" value="<?php echo implode(',', $availableYears); ?>">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi-x-circle"></i>&nbsp;Κλείσιμο</button>&nbsp;
         <button type="button" class="btn btn-primary" id="saveConfigBtn"><i class="bi-save"></i>&nbsp;Αποθήκευση</button>
       </div>

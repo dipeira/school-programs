@@ -430,13 +430,29 @@ $(document).ready(function() {
                 $selectYear.empty().append('<option value="">Επιλέξτε έτος...</option>');
                 
                 var allYears = [];
-                // Get current year from hidden input
                 // Sync with Metadata table (Source of Truth)
                 $.each(metaData, function(i, meta) {
                     if (meta.year_name && allYears.indexOf(meta.year_name) === -1) {
                         allYears.push(meta.year_name);
                     }
                 });
+
+                // Get current year from hidden input
+                var currentSxetos = $('#currentSxetos').val();
+                if (currentSxetos && allYears.indexOf(currentSxetos) === -1) {
+                    allYears.push(currentSxetos);
+                }
+                
+                // Also get available past years
+                var availableStr = $('#availableYearsHidden').val();
+                if (availableStr) {
+                    var pastYears = availableStr.split(',');
+                    $.each(pastYears, function(i, py) {
+                        if (py && allYears.indexOf(py) === -1) {
+                            allYears.push(py);
+                        }
+                    });
+                }
 
                 allYears.sort().reverse();
 
