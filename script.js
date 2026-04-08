@@ -686,7 +686,7 @@ $(document).ready(function() {
     var urlParams = new URLSearchParams(window.location.search);
     var isAdmin = $('#isAdmin').val() === '1';
     
-    if (urlParams.has('year')) {
+    if (urlParams.get('year')) {
         // Hide only specific data-modifying actions in archives
         $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
         

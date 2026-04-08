@@ -304,7 +304,7 @@ else {
     
     echo '<form method="GET" class="d-inline-flex align-items-center mb-3 mt-2">';
     echo '<label class="fw-bold me-2">Επιλογή Έτους: </label>';
-    echo '<select name="year" class="form-select w-auto" onchange="this.form.submit()">';
+    echo '<select name="year" class="form-select w-auto" onchange="if(this.value){this.form.submit();}else{window.location.href=\'index.php\';}">';
     echo '<option value="">Τρέχον Έτος (Ενεργό)</option>';
     foreach ($availableYears as $y) {
         $sel = (isset($_GET['year']) && $_GET['year'] === $y) ? 'selected' : '';
