@@ -88,7 +88,10 @@ $(document).ready(function() {
                     {
                         extend: 'pdfHtml5',
                         orientation: 'landscape',
-                        pageSize: 'A4'
+                        pageSize: 'A4',
+                        exportOptions: {
+                            columns: ':not(:last-child)'
+                        }
                     }
                 ]
             }
