@@ -33,6 +33,11 @@
 ### 1. Προετοιμασία Αρχείων
 Αντιγράψτε τα αρχεία του project στον φάκελο `htdocs` του διακομιστή σας (π.χ. `C:\xampp\htdocs\school-programs`).
 
+*Σημείωση για Ubuntu Server:* Εάν κάνετε εγκατάσταση σε διακομιστή Ubuntu, ο ιδιοκτήτης (owner) του φακέλου πρέπει να είναι ο χρήστης `administrator` και η ομάδα να είναι η `www-data`. Εκτελέστε την εξής εντολή:
+```bash
+sudo chown administrator:www-data school-programs
+```
+
 ### 2. Εγκατάσταση Εξαρτήσεων (Composer)
 Ανοίξτε το τερματικό στον φάκελο του project (π.χ. στο `C:\xampp\htdocs\school-programs`) και εκτελέστε την παρακάτω εντολή για να εγκαταστήσετε τις απαραίτητες βιβλιοθήκες PHP (όπως phpcas, phpword):
 ```bash
