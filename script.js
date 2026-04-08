@@ -85,7 +85,11 @@ $(document).ready(function() {
                         popoverTitle: 'Επιλογή ορατών στηλών'
                     },
                     'excelHtml5',
-                    'pdfHtml5'
+                    {
+                        extend: 'pdfHtml5',
+                        orientation: 'landscape',
+                        pageSize: 'A4'
+                    }
                 ]
             }
         }
