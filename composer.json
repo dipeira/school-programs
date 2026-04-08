@@ -13,6 +13,7 @@
 	},
 	"config": {
 		"secure-http": false,
-		"disable-tls": true
+		"disable-tls": true,
+		"platform-check": false
 	}
 }
