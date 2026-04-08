@@ -35,7 +35,7 @@
 
 *Σημείωση για Ubuntu Server:* Εάν κάνετε εγκατάσταση σε διακομιστή Ubuntu, ο ιδιοκτήτης (owner) του φακέλου πρέπει να είναι ο χρήστης `administrator` και η ομάδα να είναι η `www-data`. Εκτελέστε την εξής εντολή:
 ```bash
-sudo chown administrator:www-data school-programs
+sudo chown -R administrator:www-data school-programs
 ```
 
 ### 2. Εγκατάσταση Εξαρτήσεων (Composer)
