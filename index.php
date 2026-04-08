@@ -93,6 +93,7 @@ if (!$prDebug) {
 	// Add your CAS server integration here
 	// phpCAS simple client, import phpCAS lib (downloaded with composer)
 	require_once('vendor/autoload.php');
+
 	//initialize phpCAS using SAML
 	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
 	// if logout
@@ -249,6 +250,7 @@ else {
             echo '<tr>';
             echo '<th>A/A</th>';
             echo '<th>Όνομα Σχολείου</th>';
+            echo '<th>Επταψήφιος κωδικός σχολείου</th>';
 						echo '<th>Κατηγορία</th>';
             echo '<th>Τίτλος προγράμματος</th>';
             echo '<th>Έλεγχος</th>';
@@ -262,6 +264,7 @@ else {
                 echo '<tr>';
                 echo '<td>' . $row['pid'] . '</td>';
                 echo '<td>' . $row['name'] . '</td>';
+                echo '<td>' . $row['code'] . '</td>';
 								echo '<td>' . $row['categ'] . '</td>';
                 echo '<td>' . $row['titel'] . '</td>';
                 echo '<td>' . $row['chk'] . '</td>';
@@ -290,8 +293,8 @@ else {
 				echo '<form action="" method="POST">';
 				echo '<div class="d-flex flex-wrap gap-2 align-items-center">';
 				if ($_SESSION['admin']){
-					echo "<!-- Button to open the modal -->";
 					echo '<button type="button" class="btn btn-primary" id="btnConfig" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
+
 					echo '<button type="button" class="btn btn-success" id="exportButton" data-year="'.(isset($_GET['year'])?$_GET['year']:'').'"><span class="bi bi-file-earmark-excel"></span>&nbsp;Εξαγωγή σε Excel</button>';
                     if ($_SESSION['uid'] === 'dipeira' || $_SESSION['uid'] === 'taypeira') {
                         echo '<button type="button" class="btn btn-danger" id="btnAdminYear" data-bs-toggle="modal" data-bs-target="#archiveModal"><span class="bi-archive"></span>&nbsp;Διαχείριση Έτους</button>';
@@ -305,14 +308,16 @@ else {
         $conn->close();
     
 
-// Add your export and add new program buttons here
+
+
 
 
 
 $author = '(c) 2024, Τμήμα Δ - Πληροφορικής & Νέων Τεχνολογιών, Δ/νση Π.Ε. Ηρακλείου.';
 echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 
-// Include Bootstrap and DataTables.net JavaScript libraries
+
+
 
 
 ?>

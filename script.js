@@ -65,20 +65,17 @@ $(document).ready(function() {
         language: {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/el.json',
         },
-        // columnDefs: [
-        //     { targets: [1, 2], visible: false } // Hide columns 2 and 3 (zero-based indexing)
-        // ],
         columnDefs: [
             {
-                targets: 1,
+                targets: [1, 2],
                 className: 'noVis'
             },
             {
-                targets: 6,
+                targets: 7,
                 type: 'num' // Force strict mathematical sorting so data-order integer isn't parsed as text
             }
         ],
-        order: [[6, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
+        order: [[7, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
         layout: {
             topStart: {
                 buttons: [
