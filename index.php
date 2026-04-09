@@ -270,6 +270,13 @@ else {
 }
 
 
+    // Detect legacy table schema
+    $isLegacy = false;
+    $checkSch1 = $conn->query("SHOW COLUMNS FROM `$prTable` LIKE 'sch1'");
+    if ($checkSch1 && $checkSch1->num_rows == 0) {
+        $isLegacy = true; 
+    }
+
     if (!$_SESSION['admin']) {
         $clauses = [];
         if (!empty($_SESSION['email1'])) $clauses[] = "s.email1='" . mysqli_real_escape_string($conn, $_SESSION['email1']) . "'";
@@ -277,9 +284,18 @@ else {
         if (!empty($sch_code)) $clauses[] = "s.code='" . mysqli_real_escape_string($conn, $sch_code) . "'";
         
         $where = !empty($clauses) ? implode(" OR ", $clauses) : "1=0"; // Match nothing if no identifier
-        $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 WHERE ($where)";
+        
+        if ($isLegacy) {
+            $sql = "SELECT p.*, p.id as pid, p.category as categ, p.title as titel, p.done as chk, p.agree as vev, s.name, s.code FROM `$prTable` p JOIN $schTable s ON s.code = p.sch_id WHERE ($where) ORDER BY p.id DESC";
+        } else {
+            $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 WHERE ($where) ORDER BY p.id DESC";
+        }
 	} else {
-		$sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1";
+        if ($isLegacy) {
+            $sql = "SELECT p.*, p.id as pid, p.category as categ, p.title as titel, p.done as chk, p.agree as vev, s.name, s.code FROM `$prTable` p JOIN $schTable s ON s.code = p.sch_id ORDER BY p.id DESC";
+        } else {
+		    $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 ORDER BY p.id DESC";
+        }
 	}
     $schid = 0; // Initialize schid
 	$result = $conn->query($sql);
