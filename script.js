@@ -187,7 +187,7 @@ $(document).ready(function() {
         $('#publish_images_preview').empty();
         $('#publish_files').val('');
         $('#publish_check').prop('checked', false);
-        $('#publish').val('Όχι');
+        $('#publish_input').val('Όχι');
         $('#catalog_fields_wrapper').hide();
         $('#publish_text').val('');
         updateWordCount();
@@ -254,7 +254,7 @@ $(document).ready(function() {
             // Map publication checkbox state (Greek 'Ναι' in unicode is \u039d\u03b1\u03b9)
             var isPublished = (data.publish === 'Ναι' || data.publish === '\u039d\u03b1\u03b9');
             $('#publish_check').prop('checked', isPublished);
-            $('#publish').val(isPublished ? 'Ναι' : 'Όχι');
+            $('#publish_input').val(isPublished ? 'Ναι' : 'Όχι');
             if (isPublished) {
                 $('#catalog_fields_wrapper').show();
             } else {
@@ -322,7 +322,7 @@ $(document).ready(function() {
     // Handle Publish Settings checkbox toggle
     $(document).on('change', '#publish_check', function() {
         var checked = $(this).is(':checked');
-        $('#publish').val(checked ? 'Ναι' : 'Όχι');
+        $('#publish_input').val(checked ? 'Ναι' : 'Όχι');
         if (checked) {
             $('#catalog_fields_wrapper').slideDown();
         } else {

@@ -201,7 +201,7 @@ if (!$isAuthenticated):
 							Σύστημα ελέγχου, διαχείρισης και αυτόματης έκδοσης βεβαιώσεων
 						</p>
 
-						<form id="login" method="post">
+						<form id="login" action="index.php" method="post">
 							<button type="submit" class="btn btn-primary w-100 btn-login" name="login-btn">
 								<i class="bi bi-box-arrow-in-right me-2"></i>Είσοδος μέσω Π.Σ.Δ.
 							</button>
@@ -475,7 +475,7 @@ else {
         }
 				// Logout button
 				echo "<br><br>";
-				echo '<form action="" method="POST">';
+				echo '<form action="index.php" method="POST">';
 				echo '<div class="d-flex flex-wrap gap-2 align-items-center">';
 				if ($_SESSION['admin']){
 					echo '<button type="button" class="btn btn-primary" id="btnConfig" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
@@ -887,7 +887,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                         <div class="form-check mb-3 mt-3">
                             <input class="form-check-input" type="checkbox" id="publish_check">
                             <label class="form-check-label fw-bold" for="publish_check">Επιθυμώ δημοσίευση στον κατάλογο</label>
-                            <input type="hidden" id="publish" name="publish" value="Όχι">
+                            <input type="hidden" id="publish_input" name="publish" value="Όχι">
                         </div>
                         <div id="catalog_fields_wrapper" style="display: none;">
                             <div class="form-group mb-3">
