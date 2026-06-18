@@ -847,6 +847,8 @@ $(document).ready(function() {
     // Public Catalog Script Logic
     // ==========================================
     var currentCatalogData = [];
+    var catalogPageSize = 9;
+    var catalogCurrentPage = 1;
 
     function stripGreekAccents(str) {
         if (!str) return '';
@@ -874,13 +876,22 @@ $(document).ready(function() {
 
         $('#catalog_items').empty();
         $('#catalog_empty').hide();
+        $('#catalog_pagination').hide();
 
         if (filteredData.length === 0) {
             $('#catalog_empty').show();
             return;
         }
 
-        $.each(filteredData, function(index, item) {
+        // Pagination calculation
+        var totalPages = Math.ceil(filteredData.length / catalogPageSize);
+        if (catalogCurrentPage < 1) catalogCurrentPage = 1;
+        if (catalogCurrentPage > totalPages) catalogCurrentPage = totalPages;
+
+        var startIndex = (catalogCurrentPage - 1) * catalogPageSize;
+        var pageData = filteredData.slice(startIndex, startIndex + catalogPageSize);
+
+        $.each(pageData, function(index, item) {
             var images = [];
             try {
                 if (item.publish_images) {
@@ -909,6 +920,44 @@ $(document).ready(function() {
 
             $('#catalog_items').append(cardHtml);
         });
+
+        // Render pagination controls
+        var $paginationList = $('#catalog_pagination_list');
+        $paginationList.empty();
+        
+        if (totalPages > 1) {
+            $('#catalog_pagination').show();
+            
+            // Previous button
+            var prevClass = (catalogCurrentPage === 1) ? 'disabled' : '';
+            var prevHtml = 
+                '<li class="page-item ' + prevClass + '">' +
+                    '<a class="page-link btn-catalog-page" href="#" data-page="' + (catalogCurrentPage - 1) + '" aria-label="Previous">' +
+                        '<span aria-hidden="true">&laquo;</span>' +
+                    '</a>' +
+                '</li>';
+            $paginationList.append(prevHtml);
+
+            // Page numbers
+            for (var p = 1; p <= totalPages; p++) {
+                var activeClass = (p === catalogCurrentPage) ? 'active' : '';
+                var pageHtml = 
+                    '<li class="page-item ' + activeClass + '">' +
+                        '<a class="page-link btn-catalog-page" href="#" data-page="' + p + '">' + p + '</a>' +
+                    '</li>';
+                $paginationList.append(pageHtml);
+            }
+
+            // Next button
+            var nextClass = (catalogCurrentPage === totalPages) ? 'disabled' : '';
+            var nextHtml = 
+                '<li class="page-item ' + nextClass + '">' +
+                    '<a class="page-link btn-catalog-page" href="#" data-page="' + (catalogCurrentPage + 1) + '" aria-label="Next">' +
+                        '<span aria-hidden="true">&raquo;</span>' +
+                    '</a>' +
+                '</li>';
+            $paginationList.append(nextHtml);
+        }
 
         // Display Details Click Handler
         $('.btn-view-program').off('click').on('click', function() {
@@ -969,22 +1018,39 @@ $(document).ready(function() {
         var selectedYear = $(this).val() || '';
         $('#catalogSearchInput').val(''); // Clear search box when changing year
         $('#btn_clear_search').addClass('d-none');
+        catalogCurrentPage = 1; // Reset to page 1
         loadPublicCatalog(selectedYear);
     });
 
     $(document).on('input', '#catalogSearchInput', function() {
+        catalogCurrentPage = 1; // Reset to page 1
         renderCatalog();
     });
 
     $(document).on('click', '#btn_clear_search', function() {
         $('#catalogSearchInput').val('');
+        catalogCurrentPage = 1; // Reset to page 1
         renderCatalog();
+    });
+
+    $(document).on('click', '.btn-catalog-page', function(e) {
+        e.preventDefault();
+        var targetPage = parseInt($(this).data('page'));
+        if (targetPage && targetPage !== catalogCurrentPage) {
+            catalogCurrentPage = targetPage;
+            renderCatalog();
+            // Scroll smoothly back to top of catalog section
+            $('html, body').animate({
+                scrollTop: $('#catalog_list_view').offset().top - 20
+            }, 200);
+        }
     });
 
     function loadPublicCatalog(year) {
         $('#catalog_loading').show();
         $('#catalog_items').hide().empty();
         $('#catalog_empty').hide();
+        $('#catalog_pagination').hide();
         $('#catalog_detail_view').hide();
         $('#catalog_list_view').show();
 
@@ -996,6 +1062,7 @@ $(document).ready(function() {
             success: function(data) {
                 $('#catalog_loading').hide();
                 currentCatalogData = data || [];
+                catalogCurrentPage = 1; // Reset to page 1
                 renderCatalog();
                 $('#catalog_items').fadeIn(200);
             },

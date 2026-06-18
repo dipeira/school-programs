@@ -257,6 +257,15 @@ if (!$isAuthenticated):
                                 <!-- Will be populated by JS -->
                             </div>
                             
+                            <!-- Catalog Pagination -->
+                            <div id="catalog_pagination" class="d-flex justify-content-center mt-5" style="display: none;">
+                                <nav aria-label="Catalog navigation">
+                                    <ul id="catalog_pagination_list" class="pagination pagination-md justify-content-center mb-0">
+                                        <!-- Will be populated by JS -->
+                                    </ul>
+                                </nav>
+                            </div>
+                            
                             <!-- Empty Message -->
                             <div id="catalog_empty" class="alert alert-info text-center py-4" style="display: none;">
                                 <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
