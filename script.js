@@ -820,7 +820,30 @@ $(document).ready(function() {
         printContents += "<div style='margin-top: 30px; text-align: right; font-style: italic; font-size: 0.8em;'>Ημερομηνία Εκτύπωσης: " + new Date().toLocaleString() + "</div>";
         printContents += "</div>";
 
-        var p    // ==========================================
+        var printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>Εκτύπωση Προγράμματος</title>');
+        printWindow.document.write('<style>@media print { @page { size: A4; margin: 2cm; } body { font-family: Arial, sans-serif; } #print-area { width: 100%; } h2 { color: #000; } h3 { font-size: 1.2em; page-break-after: avoid; } .form-group { margin-bottom: 10px; } } </style>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(printContents);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        
+        setTimeout(function() {
+            printWindow.print();
+        }, 300);
+    });
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var isAdmin = $('#isAdmin').val() === '1';
+    
+    if (urlParams.get('year')) {
+        $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
+        if (!isAdmin) {
+            $('.btn-vev').addClass('d-none');
+        }
+    }
+
+    // ==========================================
     // Public Catalog Script Logic
     // ==========================================
     var currentCatalogData = [];
