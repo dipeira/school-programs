@@ -42,7 +42,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $content .= "\$prDbpassword = '" . addslashes($prDbpassword_new) . "';\n\n";
 
     $content .= "\$prTable = '" . addslashes($prTable ?? 'progs') . "';\n";
-    $content .= "\$schTable = '" . addslashes($schTable ?? 'progs_schools') . "';\n";
+    $content .= "\$schTable = '" . addslashes($schTable ?? 'progs_schools') . "';\n\n";
+    $content .= "function db_connect() {\n";
+    $content .= "    global \$prDbhost, \$prDbusername, \$prDbpassword, \$prDbname;\n";
+    $content .= "    // Temporarily turn off exception reporting for connection fallback\n";
+    $content .= "    \$previous_reporting = mysqli_report(MYSQLI_REPORT_OFF);\n\n";
+    $content .= "    \$conn = @new mysqli(\$prDbhost, \$prDbusername, \$prDbpassword, \$prDbname);\n";
+    $content .= "    if (\$conn && !\$conn->connect_error) {\n";
+    $content .= "        \$conn->set_charset(\"utf8\");\n";
+    $content .= "        mysqli_report(\$previous_reporting);\n";
+    $content .= "        return \$conn;\n";
+    $content .= "    }\n\n";
+    $content .= "    \$conn = @new mysqli(\$prDbhost, \$prDbusername, '', \$prDbname);\n";
+    $content .= "    if (\$conn && !\$conn->connect_error) {\n";
+    $content .= "        \$conn->set_charset(\"utf8\");\n";
+    $content .= "        mysqli_report(\$previous_reporting);\n";
+    $content .= "        return \$conn;\n";
+    $content .= "    }\n\n";
+    $content .= "    mysqli_report(\$previous_reporting);\n";
+    $content .= "    die(\"Database connection failed: Access denied or database does not exist.\");\n";
+    $content .= "}\n";
     $content .= "?>";
 
     if (file_put_contents('conf.php', $content) !== false) {
