@@ -40,13 +40,8 @@ if (isset($_GET['id'])) {
 }
 
 // Create connection (Object Oriented)
-$conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+$conn = db_connect();
 $conn->set_charset("utf8");
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
 
 // Load current school year from config.json
 $jsonString = file_get_contents('config.json');

@@ -4,7 +4,7 @@ require_once('conf.php'); // Include your configuration file
 
 // GET YEAR METADATA
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_metadata') {
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $mysqli = db_connect();
     $result = $mysqli->query("SELECT * FROM progs_metadata");
     $meta = [];
     while ($row = $result->fetch_assoc()) {
@@ -15,13 +15,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
     exit;
 }
 
+// GET CATALOG ACTION
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_catalog') {
+    $year = isset($_GET['year']) ? preg_replace('/[^a-zA-Z0-9\-_]/', '', $_GET['year']) : '';
+    $catTable = $prTable;
+    if (!empty($year)) {
+        $catTable = "progs_" . $year;
+    }
+    $mysqli = db_connect();
+    
+    // Explicit selection of columns to prevent column name collisions (s.id overwriting p.id)
+    $sql = "SELECT p.id AS pid, p.titel, p.categ, p.publish, p.publish_text, p.publish_images, s.name AS school_name 
+            FROM `$catTable` p 
+            JOIN $schTable s ON p.sch1 = s.id 
+            WHERE p.publish = 'Ναι' 
+            ORDER BY p.id DESC";
+            
+    $result = $mysqli->query($sql);
+    $catalog = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $catalog[] = $row;
+        }
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($catalog);
+    $mysqli->close();
+    exit;
+}
+
 // SAVE YEAR METADATA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_metadata') {
     if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
         echo json_encode(['success' => false, 'error' => 'Unauthorized action.']);
         exit;
     }
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $mysqli = db_connect();
     $metadata = json_decode($_POST['metadata'], true);
     
     $mysqli->begin_transaction();
@@ -58,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     try {
-        $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+        $mysqli = db_connect();
         $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['archive_year_suffix']);
         if (empty($suffix)) {
             echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
@@ -95,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     try {
-        $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+        $mysqli = db_connect();
         $suffix = preg_replace('/[^a-zA-Z0-9\-_]/', '', $_POST['restore_year_suffix']);
         if (empty($suffix)) {
             echo json_encode(['success' => false, 'error' => 'Invalid backup suffix format.']);
@@ -131,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     $recordId = (int)$_GET['id']; // Cast to integer for safety
 
     // Use the $recordId to fetch the record details from your database
-    $conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $conn = db_connect();
 
     // Use prepared statement to prevent SQL injection
     $stmt = $conn->prepare("SELECT p.*, s.name as sch1name FROM `$prTable` p JOIN $schTable s ON p.sch1 = s.id WHERE p.id = ?");
@@ -148,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
         $conn->close();
 
         // Return the record data as JSON (or any other format you prefer)
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode($recordData);
     } else {
         // Close the statement and database connection
@@ -160,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
 
 // get school name (by id)
 } else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['sch_id'])) {
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $mysqli = db_connect();
     // Use prepared statement to prevent SQL injection
     $schId = (int)$_GET['sch_id']; // Cast to integer for safety
     $stmt = $mysqli->prepare("SELECT name FROM $schTable WHERE id = ?");
@@ -174,11 +203,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
 
 // get all schools
 } else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['all_schools'])) {
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+    $mysqli = db_connect();
 
-    if ($mysqli->connect_error) {
-        die("Connection failed: " . $mysqli->connect_error);
-    }
     // Query your database to get options from the $schTable table
     if (isset($_GET['term']) ){
         // Use prepared statement to prevent SQL injection
@@ -209,82 +235,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     $mysqli->close();
 
     // Return the options as JSON
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode($options);
 
-// add record
-} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && $_POST['id'] == 0) {
-    // INSERT operation
-    // Connect to your database (adjust these parameters as needed)
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-
-    // Check for a successful database connection
-    if ($mysqli->connect_error) {
-        $response = ['success' => false, 'error' => 'Database connection error'];
-        echo json_encode($response);
-        exit;
-    }
-
-    // Create an empty array to store the SQL insert fields and values
-    $fields = array();
-    $values = array();
-
-    // Iterate through the posted fields and construct SQL insert fields and values
-    foreach ($_POST as $key => $value) {
-        // build the SQL insert fields and values
-        if ($key == 'praxidate') {
-            $dateTime = DateTime::createFromFormat('d/m/Y', $value);
-            if ($dateTime != false) {
-                $mysql_date = $dateTime->format('Y-m-d');
-                $fields[] = "`$key`";
-                $values[] = "'" . $mysql_date . "'";
+// POST preprocessing for file uploads and deletes
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
+    // Process file uploads and deleted images
+    $recordId = (int)$_POST['id'];
+    $mysqli = db_connect();
+    
+    $uploaded_paths = [];
+    if ($recordId > 0) {
+        $stmt = $mysqli->prepare("SELECT publish_images FROM `$prTable` WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param('i', $recordId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) {
+                $uploaded_paths = json_decode($row['publish_images'] ?? '[]', true) ?: [];
             }
-            continue;
+            $stmt->close();
         }
-        // Sanitize and validate the values as needed
-        $fields[] = "`$key`";
-        $values[] = "'" . mysqli_real_escape_string($mysqli, $value) . "'";
     }
+    
+    // Handle deleted images
+    if (isset($_POST['deleted_images']) && !empty($_POST['deleted_images'])) {
+        $deleted = json_decode($_POST['deleted_images'], true) ?: [];
+        foreach ($deleted as $del_img) {
+            $del_img = str_replace('\\', '/', $del_img);
+            if (strpos($del_img, 'uploads/img_') === 0 && !strpos($del_img, '..')) {
+                $full_path = 'c:/xampp/htdocs/school-programs/' . $del_img;
+                if (file_exists($full_path)) {
+                    @unlink($full_path);
+                }
+                $key_idx = array_search($del_img, $uploaded_paths);
+                if ($key_idx !== false) {
+                    unset($uploaded_paths[$key_idx]);
+                }
+            }
+        }
+        $uploaded_paths = array_values($uploaded_paths);
+    }
+    
+    // Handle new file uploads
+    if (isset($_FILES['publish_files'])) {
+        $files = $_FILES['publish_files'];
+        // Check if multiple files or single file structure
+        if (isset($files['name']) && !is_array($files['name'])) {
+            $files = [
+                'name' => [$files['name']],
+                'type' => [$files['type']],
+                'tmp_name' => [$files['tmp_name']],
+                'error' => [$files['error']],
+                'size' => [$files['size']]
+            ];
+        }
+        
+        if (isset($files['name']) && is_array($files['name'])) {
+            $num_files = count($files['name']);
+            for ($i = 0; $i < $num_files; $i++) {
+                if (isset($files['error'][$i]) && $files['error'][$i] === UPLOAD_ERR_OK) {
+                    $file_size = $files['size'][$i];
+                    if ($file_size > 8388608) { // 8MB
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['success' => false, 'error' => 'Το αρχείο ' . htmlspecialchars($files['name'][$i]) . ' υπερβαίνει το όριο των 8MB.']);
+                        $mysqli->close();
+                        exit;
+                    }
+                    
+                    $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+                    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    if (!in_array($ext, $allowed)) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['success' => false, 'error' => 'Μη επιτρεπτός τύπος αρχείου: ' . htmlspecialchars($files['name'][$i])]);
+                        $mysqli->close();
+                        exit;
+                    }
+                    
+                    if (!file_exists('uploads')) {
+                        mkdir('uploads', 0777, true);
+                    }
+                    
+                    $unique_name = 'uploads/img_' . uniqid() . '_' . time() . '_' . $i . '.' . $ext;
+                    if (move_uploaded_file($files['tmp_name'][$i], $unique_name)) {
+                        $uploaded_paths[] = $unique_name;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Set the value for database insertion
+    $_POST['publish_images'] = json_encode($uploaded_paths);
+    
+    // Now route to INSERT or UPDATE operation
+    if ($recordId == 0) {
+        // INSERT operation
+        $fields = array();
+        $values = array();
 
-    if (count($fields) > 0 && count($values) > 0) {
-        // Construct the SQL query for INSERT
-        $sql = "INSERT INTO `$prTable` (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $values) . ")";
+        foreach ($_POST as $key => $value) {
+            // Skip utility parameters
+            if (in_array($key, ['action', 'id', 'record_id', 'deleted_images', 'publish_check', 'publish_files'])) {
+                continue;
+            }
+            if ($key == 'praxidate') {
+                $dateTime = DateTime::createFromFormat('d/m/Y', $value);
+                if ($dateTime != false) {
+                    $mysql_date = $dateTime->format('Y-m-d');
+                    $fields[] = "`$key`";
+                    $values[] = "'" . $mysql_date . "'";
+                }
+                continue;
+            }
+            $fields[] = "`$key`";
+            $values[] = "'" . mysqli_real_escape_string($mysqli, $value) . "'";
+        }
 
-        // Execute the SQL query to insert the new record
-        if (mysqli_query($mysqli, $sql)) {
-            $response = ['success' => true];
+        if (count($fields) > 0 && count($values) > 0) {
+            $sql = "INSERT INTO `$prTable` (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $values) . ")";
+            if (mysqli_query($mysqli, $sql)) {
+                $response = ['success' => true];
+            } else {
+                $response = ['success' => false, 'error' => 'Database insert error: ' . mysqli_error($mysqli)];
+            }
         } else {
-            $response = ['success' => false, 'error' => 'Database insert error: ' . mysqli_error($mysqli)];
+            $response = ['success' => false, 'error' => 'No fields to insert'];
         }
-    } else {
-        $response = ['success' => false, 'error' => 'No fields to insert'];
-    }
 
-    // Close the database connection
-    $mysqli->close();
-
-    // Return a JSON response indicating success or failure
-    echo json_encode($response);
-// update record
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id']) && $_POST['id'] > 0) {
-    // UPDATE operation
-    $recordId = $_POST['id'] > 0 ? $_POST['id'] : false;
-    // Connect to your database (adjust these parameters as needed)
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-
-    // Check for a successful database connection
-    if ($mysqli->connect_error) {
-        $response = ['success' => false, 'error' => 'Database connection error'];
+        $mysqli->close();
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode($response);
         exit;
-    }
+    } else {
+        // UPDATE operation
+        $updates = array();
 
-    // Create an empty array to store the SQL updates
-    $updates = array();
-
-    // Iterate through the posted fields and construct SQL updates
-    foreach ($_POST as $key => $value) {
-        // Exclude the 'record_id' field and build the SET part of the SQL statement
-        if ($key !== 'record_id') {
+        foreach ($_POST as $key => $value) {
+            // Skip utility parameters
+            if (in_array($key, ['action', 'id', 'record_id', 'deleted_images', 'publish_check', 'publish_files'])) {
+                continue;
+            }
             if ($key == 'praxidate') {
                 $dateTime = DateTime::createFromFormat('d/m/Y', $value);
                 if ($dateTime != false) {
@@ -293,43 +384,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
                 }
                 continue;
             }
-            // Sanitize and validate the values as needed
             $updates[] = "`$key` = '" . mysqli_real_escape_string($mysqli, $value) . "'";
         }
-    }
 
-    if (count($updates) > 0) {
-        // Construct the SQL query for UPDATE
-        $sql = "UPDATE `$prTable` SET " . implode(', ', $updates) . " WHERE id = " . (int)$recordId;
-
-        // Execute the SQL query to update the record
-        if (mysqli_query($mysqli, $sql)) {
-            $response = ['success' => true];
+        if (count($updates) > 0) {
+            $sql = "UPDATE `$prTable` SET " . implode(', ', $updates) . " WHERE id = " . (int)$recordId;
+            if (mysqli_query($mysqli, $sql)) {
+                $response = ['success' => true];
+            } else {
+                $response = ['success' => false, 'error' => 'Database update error: ' . mysqli_error($mysqli)];
+            }
         } else {
-            $response = ['success' => false, 'error' => 'Database update error: ' . mysqli_error($mysqli)];
+            $response = ['success' => false, 'error' => 'No fields to update'];
         }
-    } else {
-        $response = ['success' => false, 'error' => 'No fields to update'];
-    }
 
-    // Close the database connection
-    $mysqli->close();
-
-    // Return a JSON response indicating success or failure
-    echo json_encode($response);
-// delete record
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
-    $deleteId = $_POST['delete_id'];
-
-    // Connect to the database
-    $mysqli = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-
-    // Check for a successful database connection
-    if ($mysqli->connect_error) {
-        $response = ['success' => false, 'error' => 'Database connection error'];
+        $mysqli->close();
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode($response);
         exit;
     }
+
+// delete record
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
+    $deleteId = (int)$_POST['delete_id'];
+    $mysqli = db_connect();
 
     // Prepare the SQL query to delete the record
     $sql = "DELETE FROM `$prTable` WHERE id = ?";
@@ -337,28 +415,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
 
     if ($stmt) {
         $stmt->bind_param('i', $deleteId);
-
-        // Execute the statement
         if ($stmt->execute()) {
             $response = ['success' => true];
         } else {
             $response = ['success' => false, 'error' => 'Database delete error: ' . $stmt->error];
         }
-
         $stmt->close();
     } else {
         $response = ['success' => false, 'error' => 'Statement preparation failed: ' . $mysqli->error];
     }
-
-    // Close the database connection
     $mysqli->close();
-
-    // Return a JSON response
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode($response);
+    exit;
 } else {
     // Handle invalid or missing parameters
     $response = ['success' => false, 'error' => 'Invalid request'];
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode($response);
+    exit;
 }
-//}
 ?>

@@ -11,12 +11,7 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== 1) {
 }
 
 // Create a new connection to the database
-$conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
-
-// Check the connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+$conn = db_connect();
 
 if (isset($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
     $prTable = "progs_" . $_GET['year'];

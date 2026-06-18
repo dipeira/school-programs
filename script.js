@@ -1,5 +1,6 @@
 $(document).ready(function() {
     const formatDate = inputDate => inputDate.split('-').reverse().join('/');
+    var deletedImagesTrack = [];
 
     function confirmDelete(recordId) {
         // Show SweetAlert confirmation dialog
@@ -60,74 +61,83 @@ $(document).ready(function() {
     }
 
 
-    // Initialize DataTable
-    $('#progs').DataTable({
-        language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/el.json',
-        },
-        columnDefs: [
-            {
-                targets: [1, 2],
-                className: 'noVis'
+    // Initialize DataTable safely
+    if ($.fn.DataTable && $('#progs').length) {
+        $('#progs').DataTable({
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/el.json',
             },
-            {
-                targets: 7,
-                type: 'num' // Force strict mathematical sorting so data-order integer isn't parsed as text
-            }
-        ],
-        order: [[7, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
-        layout: {
-            topStart: {
-                buttons: [
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)',
-                        popoverTitle: 'Επιλογή ορατών στηλών'
-                    },
-                    'excelHtml5',
-                    {
-                        extend: 'pdfHtml5',
-                        orientation: 'landscape',
-                        pageSize: 'A4',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
+            columnDefs: [
+                {
+                    targets: [1, 2],
+                    className: 'noVis'
+                },
+                {
+                    targets: 7,
+                    type: 'num' // Force strict mathematical sorting so data-order integer isn't parsed as text
+                }
+            ],
+            order: [[7, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
+            layout: {
+                topStart: {
+                    buttons: [
+                        {
+                            extend: 'colvis',
+                            columns: ':not(.noVis)',
+                            popoverTitle: 'Επιλογή ορατών στηλών'
+                        },
+                        'excelHtml5',
+                        {
+                            extend: 'pdfHtml5',
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':not(:last-child)'
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
+        });
+    }
+
+    if ($.fn.datepicker && $('.datepicker').length) {
+        $('.datepicker').datepicker({
+            format: 'dd/mm/yyyy',
+        });
+    }
+
+
+    // Initialize Select2 elements safely
+    if ($.fn.select2) {
+        if ($('#sch1').length) {
+            $('#sch1').select2({
+                ajax: {
+                    url: 'db.php?all_schools=true', // The URL to retrieve the options
+                    dataType: 'json',
+                    delay: 500,
+                    processResults: function(data) { return { results: data }; },
+                    cache: true
+                },
+                minimumInputLength: 0, // You can adjust this according to your needs
+                dropdownParent: $('#editForm')
+            });
         }
-    });
 
-    $('.datepicker').datepicker({
-        format: 'dd/mm/yyyy',
-    });
-
-
-    // Initialize sch1 select2 with options
-    $('#sch1').select2({
-        ajax: {
-            url: 'db.php?all_schools=true', // The URL to retrieve the options
-            dataType: 'json',
-            delay: 500,
-            processResults: function(data) { return { results: data }; },
-            cache: true
-        },
-        minimumInputLength: 0, // You can adjust this according to your needs
-        dropdownParent: $('#editForm')
-    });
-
-    // Initialize sch2 select2 with options
-    $('#sch2').select2({
-        ajax: {
-            url: 'db.php?all_schools=true', // The URL to retrieve the options
-            dataType: 'json',
-            delay: 500,
-            processResults: function(data) { return { results: data }; },
-            cache: true
-        },
-        minimumInputLength: 0, // You can adjust this according to your needs
-        dropdownParent: $('#editForm')
-    });
+        if ($('#sch2').length) {
+            $('#sch2').select2({
+                ajax: {
+                    url: 'db.php?all_schools=true', // The URL to retrieve the options
+                    dataType: 'json',
+                    delay: 500,
+                    processResults: function(data) { return { results: data }; },
+                    cache: true
+                },
+                minimumInputLength: 0, // You can adjust this according to your needs
+                dropdownParent: $('#editForm')
+            });
+        }
+    }
 
 
     // Function to display Bootstrap alert
@@ -154,10 +164,14 @@ $(document).ready(function() {
             // Append the hidden input after the custom text element
             $hiddenInput.insertAfter($customTextElement);
             // Remove the Select2 element completely
-            $sch1.select2('destroy').remove();
+            if ($sch1.data('select2')) {
+                $sch1.select2('destroy');
+            }
+            $sch1.remove();
             $('#editForm')[0].reset();
         });   
     }
+
     $('.add-record').on('click', function() {
         // Use AJAX to get record details and populate the view modal
         // Show the view modal
@@ -166,6 +180,18 @@ $(document).ready(function() {
         $('#editTabs a[href="#school"]').tab('show');
         // enable all inputs (in case they're disabled)
         $("#editForm :input").prop("disabled", false);
+        
+        // Reset catalog specific fields
+        deletedImagesTrack = [];
+        $('#deleted_images').val('[]');
+        $('#publish_images_preview').empty();
+        $('#publish_files').val('');
+        $('#publish_check').prop('checked', false);
+        $('#publish').val('Όχι');
+        $('#catalog_fields_wrapper').hide();
+        $('#publish_text').val('');
+        updateWordCount();
+
         // get sch id (if not admin)
         var schId = $(this).data('schid');
         if (!!schId && schId != 1) {
@@ -188,10 +214,14 @@ $(document).ready(function() {
         var isAdmin = $(this).data('admin');
         var archiveYear = $(this).data('year'); // Dynamic routing
 
+        // Reset catalog inputs on load
+        deletedImagesTrack = [];
+        $('#deleted_images').val('[]');
+        $('#publish_images_preview').empty();
+        $('#publish_files').val('');
+
         // Use AJAX to get record details and populate the edit modal
         $.get('db.php', { id: recordId, year: archiveYear }, function(data) { 
-            // console.log(data);
-            
             $.each(data, function(key, value) {
                 var fieldId = key;
                 var $field = $('#' + fieldId);
@@ -199,21 +229,20 @@ $(document).ready(function() {
                 // Set the value of the form field
                 if (key === 'praxidate') {
                     $field.val(formatDate(value));
-                } else {
+                } else if ($field.length) {
                     $field.val(value);
                 }
                 
                 if (fieldId === 'sch1') {
-                    // Check if the option exists in the Select2 dropdown
-                    var $select2 = $field.data('select2');
-                    var $option = $select2.$element.find('option[value="' + value + '"]');
-                    
-                    if ($option.length === 0) {
-                        // If the option doesn't exist, add it
-                        $field.append(new Option(data.sch1name, value, true, true)).trigger('change');
-                    } else {
-                        // If the option exists, trigger 'change' without clearing existing options
-                        $field.val(value).trigger('change');
+                    if ($.fn.select2 && $field.data('select2')) {
+                        var $select2 = $field.data('select2');
+                        var $option = $select2.$element.find('option[value="' + value + '"]');
+                        
+                        if ($option.length === 0) {
+                            $field.append(new Option(data.sch1name, value, true, true)).trigger('change');
+                        } else {
+                            $field.val(value).trigger('change');
+                        }
                     }
                     // if school, disable sch1
                     if (schId > 0) {
@@ -221,7 +250,45 @@ $(document).ready(function() {
                     }
                 }
             });
+
+            // Map publication checkbox state (Greek 'Ναι' in unicode is \u039d\u03b1\u03b9)
+            var isPublished = (data.publish === 'Ναι' || data.publish === '\u039d\u03b1\u03b9');
+            $('#publish_check').prop('checked', isPublished);
+            $('#publish').val(isPublished ? 'Ναι' : 'Όχι');
+            if (isPublished) {
+                $('#catalog_fields_wrapper').show();
+            } else {
+                $('#catalog_fields_wrapper').hide();
+            }
+
+            // Word counter update
+            var descText = data.publish_text || '';
+            $('#publish_text').val(descText);
+            updateWordCount();
+
+            // Render existing images
+            var existingImages = [];
+            try {
+                if (data.publish_images) {
+                    existingImages = JSON.parse(data.publish_images);
+                }
+            } catch (e) {
+                console.error("Error parsing publish_images JSON", e);
+            }
+            
+            var $preview = $('#publish_images_preview');
+            $preview.empty();
+            if (Array.isArray(existingImages)) {
+                $.each(existingImages, function(index, imgPath) {
+                    var $wrapper = $('<div class="img-preview-wrapper" data-path="' + imgPath + '"></div>');
+                    $wrapper.append('<img src="' + imgPath + '" alt="Preview">');
+                    var $removeBtn = $('<button type="button" class="remove-img-btn"><i class="bi bi-trash"></i></button>');
+                    $wrapper.append($removeBtn);
+                    $preview.append($wrapper);
+                });
+            }
         });
+
         // if view, disable all inputs
         if (triggeredClass === 'view-record') {
             $("#editForm :input").prop("disabled", true);
@@ -239,10 +306,7 @@ $(document).ready(function() {
             $('.close-btn').prop("disabled", false);
             if (lockBasic && !isAdmin) {
                 // disable basic fields
-                // Array of input IDs to disable
                 var inputsToDisable = ['sch1', 'sch2', 'titel', 'nam1', 'nam2', 'nam3', 'eid1', 'eid2', 'eid3'];
-
-                // Loop through the array and disable each input
                 $.each(inputsToDisable, function(index, id) {
                     $('#' + id).prop('disabled', true);
                 });
@@ -255,21 +319,92 @@ $(document).ready(function() {
         $('#editTabs a[href="#school"]').tab('show');
     });
 
+    // Handle Publish Settings checkbox toggle
+    $(document).on('change', '#publish_check', function() {
+        var checked = $(this).is(':checked');
+        $('#publish').val(checked ? 'Ναι' : 'Όχι');
+        if (checked) {
+            $('#catalog_fields_wrapper').slideDown();
+        } else {
+            $('#catalog_fields_wrapper').slideUp();
+        }
+    });
+
+    // Handle Live Word Count
+    function updateWordCount() {
+        var text = $('#publish_text').val() || '';
+        var words = text.trim().split(/\s+/).filter(Boolean);
+        var count = words.length;
+        var $label = $('#word_count_label');
+        $label.text('(' + count + ' / 800 λέξεις)');
+        if (count > 800) {
+            $label.removeClass('text-muted').addClass('text-danger fw-bold');
+        } else {
+            $label.removeClass('text-danger fw-bold').addClass('text-muted');
+        }
+    }
+    $(document).on('input propertychange', '#publish_text', updateWordCount);
+
+    // Validate size limit (max 8MB per image)
+    $(document).on('change', '#publish_files', function() {
+        var files = this.files;
+        var limitExceeded = false;
+        for (var i = 0; i < files.length; i++) {
+            if (files[i].size > 8388608) { // 8MB
+                limitExceeded = true;
+                break;
+            }
+        }
+        if (limitExceeded) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Κάποιο αρχείο υπερβαίνει το όριο των 8MB! Παρακαλούμε επιλέξτε μικρότερα αρχεία.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            $(this).val('');
+        }
+    });
+
+    // Handle existing image removal
+    $(document).on('click', '.remove-img-btn', function() {
+        var $wrapper = $(this).closest('.img-preview-wrapper');
+        var path = $wrapper.data('path');
+        deletedImagesTrack.push(path);
+        $('#deleted_images').val(JSON.stringify(deletedImagesTrack));
+        $wrapper.remove();
+    });
+
     // editForm submit handler
     $('#editForm').submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
 
-        // Serialize the form data to send to db.php
-        var formData = $(this).serialize();
+        // Enforce word count limit on submit if publish enabled
+        if ($('#publish_check').is(':checked')) {
+            var text = $('#publish_text').val() || '';
+            var words = text.trim().split(/\s+/).filter(Boolean);
+            if (words.length > 800) {
+                Swal.fire(
+                    'Σφάλμα!',
+                    'Η παρουσίαση του προγράμματος δεν πρέπει να υπερβαίνει τις 800 λέξεις!',
+                    'error'
+                );
+                return;
+            }
+        }
+
+        // Use FormData to support file uploads
+        var formData = new FormData(this);
 
         // Perform an AJAX POST request to db.php to save the edited data
         $.ajax({
             url: 'db.php',
             type: 'POST',
             data: formData,
+            processData: false,
+            contentType: false,
             dataType: 'json',
             success: function(response) {
-                // Handle the response from db.php (e.g., success message or error handling)
                 if (response.success) {
                     Swal.fire(
                         'Επιτυχία!',
@@ -284,7 +419,6 @@ $(document).ready(function() {
             },
             error: function(err) {
                 console.log(err.responseText);
-                // Handle any errors from the AJAX request
                 showAlert('Σφάλμα αποθήκευσης...', 'error');
             }
         });
@@ -524,7 +658,6 @@ $(document).ready(function() {
 
         var nextPart1 = parseInt(parts[0]) + 1;
         var nextPart2 = parseInt(parts[1]) + 1;
-        // Pad suffix if needed (26 -> 27)
         var suffixStr = nextPart2.toString().padStart(2, '0');
         var nextYear = nextPart1 + '-' + suffixStr;
 
@@ -539,7 +672,6 @@ $(document).ready(function() {
         
         // Update dropdown
         var $selectYear = $('#selectMetadataYear');
-        // Add at the top (after sorts)
         $selectYear.prepend('<option value="' + nextYear + '">' + nextYear + '</option>');
         $selectYear.val(nextYear).trigger('change');
         
@@ -644,7 +776,7 @@ $(document).ready(function() {
         }
     });
 
-    // Print Program Handler - Generates A4 printable version of all modal tabs
+    // Print Program Handler
     $('#printProgramBtn').on('click', function() {
         var printContents = "";
         var schoolName = $('#sch_name').val() || "Σχολείο";
@@ -658,6 +790,9 @@ $(document).ready(function() {
 
         $('#editForm .tab-pane').each(function() {
             var tabId = $(this).attr('id');
+            // Skip publish tab in printable output
+            if (tabId === 'publish') return;
+            
             var tabLabel = $("a[href='#" + tabId + "']").text().trim();
             
             printContents += "<div style='margin-bottom: 20px;'>";
@@ -698,17 +833,147 @@ $(document).ready(function() {
         }, 300);
     });
 
-    // If URL has 'year' parameter, disable 'Add' button and edit link logic for history
     var urlParams = new URLSearchParams(window.location.search);
     var isAdmin = $('#isAdmin').val() === '1';
     
     if (urlParams.get('year')) {
-        // Hide only specific data-modifying actions in archives
         $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
-        
-        // Hide certificates ONLY for non-admins in archives
         if (!isAdmin) {
             $('.btn-vev').addClass('d-none');
         }
+    }
+
+
+    // ==========================================
+    // Public Catalog Script Logic
+    // ==========================================
+    if ($('#catalog_items').length) {
+        var defaultYear = $('#publicYearSelect').val() || '';
+        loadPublicCatalog(defaultYear);
+    }
+
+    $(document).on('change', '#publicYearSelect', function() {
+        var selectedYear = $(this).val() || '';
+        loadPublicCatalog(selectedYear);
+    });
+
+    function loadPublicCatalog(year) {
+        $('#catalog_loading').show();
+        $('#catalog_items').hide().empty();
+        $('#catalog_empty').hide();
+        $('#catalog_detail_view').hide();
+        $('#catalog_list_view').show();
+
+        $.ajax({
+            url: 'db.php',
+            type: 'GET',
+            data: { action: 'get_catalog', year: year },
+            dataType: 'json',
+            success: function(data) {
+                $('#catalog_loading').hide();
+                if (!data || data.length === 0) {
+                    $('#catalog_empty').show();
+                    return;
+                }
+
+                $.each(data, function(index, item) {
+                    var images = [];
+                    try {
+                        if (item.publish_images) {
+                            images = JSON.parse(item.publish_images);
+                        }
+                    } catch (e) {}
+
+                    var firstImg = (images && images.length > 0) ? images[0] : 'https://placehold.co/600x400/ecefe6/333333?text=Πρόγραμμα+Δραστηριοτήτων';
+
+                    var cardHtml = 
+                        '<div class="col">' +
+                            '<div class="card catalog-card h-100">' +
+                                '<img src="' + firstImg + '" class="card-img-top" alt="Program Image" style="height: 180px; object-fit: cover;">' +
+                                '<div class="card-body d-flex flex-column">' +
+                                    '<div class="school-name">' + htmlEntities(item.school_name) + '</div>' +
+                                    '<h5 class="program-title">' + htmlEntities(item.titel) + '</h5>' +
+                                    '<div class="mt-auto">' +
+                                        '<span class="badge bg-primary mb-2">' + htmlEntities(item.categ) + '</span>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="card-footer bg-light">' +
+                                    '<button type="button" class="btn btn-primary btn-sm btn-view-program w-100" data-pid="' + item.pid + '"><i class="bi bi-eye me-1"></i>Προβολή</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+
+                    $('#catalog_items').append(cardHtml);
+                });
+
+                // Display Details Click Handler
+                $('.btn-view-program').on('click', function() {
+                    var pid = $(this).data('pid');
+                    var matched = null;
+                    for (var i = 0; i < data.length; i++) {
+                        if (data[i].pid == pid) {
+                            matched = data[i];
+                            break;
+                        }
+                    }
+
+                    if (matched) {
+                        $('#detail_school_badge').text(matched.school_name);
+                        $('#detail_program_title').text(matched.titel);
+                        $('#detail_category_badge').text(matched.categ);
+                        $('#detail_description_text').text(matched.publish_text || '');
+
+                        var detailImages = [];
+                        try {
+                            if (matched.publish_images) {
+                                detailImages = JSON.parse(matched.publish_images);
+                            }
+                        } catch (e) {}
+
+                        var $gallery = $('#detail_images_grid');
+                        $gallery.empty();
+                        if (detailImages && detailImages.length > 0) {
+                            $('#detail_images_section').show();
+                            $.each(detailImages, function(idx, src) {
+                                var imgCol = 
+                                    '<div class="col">' +
+                                        '<img src="' + src + '" class="img-fluid detail-gallery-img" alt="Gallery Image">' +
+                                    '</div>';
+                                $gallery.append(imgCol);
+                            });
+                        } else {
+                            $('#detail_images_section').hide();
+                        }
+
+                        // Transition views
+                        $('#catalog_list_view').fadeOut(200, function() {
+                            $('#catalog_detail_view').fadeIn(200);
+                            $('html, body').animate({
+                                scrollTop: $('#catalog_detail_view').offset().top - 20
+                            }, 300);
+                        });
+                    }
+                });
+
+                $('#catalog_items').fadeIn(200);
+            },
+            error: function() {
+                $('#catalog_loading').hide();
+                $('#catalog_empty').text('Σφάλμα κατά τη φόρτωση του καταλόγου.').show();
+            }
+        });
+    }
+
+    $(document).on('click', '#btn_catalog_back', function() {
+        $('#catalog_detail_view').fadeOut(200, function() {
+            $('#catalog_list_view').fadeIn(200);
+            $('html, body').animate({
+                scrollTop: $('#catalog_items').offset().top - 100
+            }, 300);
+        });
+    });
+
+    function htmlEntities(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 });

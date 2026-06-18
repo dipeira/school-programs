@@ -35,6 +35,25 @@ foreach ($configData as $configItem) {
     ${$configItem['name']} = $configItem['value'];
 }
 
+// Check for records to enable dynamic titles and get available years
+$conn_years = db_connect();
+$availableYears = [];
+$tableQuery = $conn_years->query("SHOW TABLES LIKE 'progs\\_%'");
+if ($tableQuery) {
+    while ($t = $tableQuery->fetch_array()) {
+        $year = str_replace('progs_', '', $t[0]);
+        if (preg_match('/^\d{4}-\d{2}$/', $year)) {
+            $availableYears[] = $year;
+        }
+    }
+}
+if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
+    $prTable = 'progs_' . $_GET['year'];
+    $prSxetos = $_GET['year']; // Override title
+}
+$conn_years->close();
+
+$isAuthenticated = false;
 if (!$prDebug) {
 	// Initialize phpCAS early
 	require_once('vendor/autoload.php');
@@ -55,9 +74,30 @@ if (!$prDebug) {
     // Check authentication. This transparently handles tickets and valid CAS redirects!
     $isAuthenticated = phpCAS::isAuthenticated();
 
-	// if user not logged-in and hasn't pressed the login button, display login form
-	if (!$isAuthenticated && !isset($_POST['login-btn'])):
-		?>
+	// force CAS authentication if button was pressed but not authenticated
+	if (!$isAuthenticated && isset($_POST['login-btn'])) {
+	    phpCAS::forceAuthentication();
+    }
+} else {
+    // Debug mode login/logout handling
+    if (isset($_POST['logout'])) {
+        $_SESSION['loggedin'] = 0;
+        session_unset();
+        session_destroy();
+        header("Location: index.php");
+        exit;
+    }
+    if (isset($_POST['login-btn'])) {
+        $_SESSION['loggedin'] = 1;
+        header("Location: index.php");
+        exit;
+    }
+    $isAuthenticated = (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == 1);
+}
+
+// if user not logged-in, display login form and public catalog
+if (!$isAuthenticated):
+	?>
 	<!DOCTYPE html>
 		<html lang="el">
 			<head>
@@ -69,6 +109,7 @@ if (!$prDebug) {
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
                 <!-- Google Fonts -->
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="style.css?v=<?= time() ?>_public">
 				<style>
                     body {
                         font-family: 'Inter', sans-serif;
@@ -173,6 +214,73 @@ if (!$prDebug) {
 					</div>
 				</div>
 
+                <!-- Public Catalog Section -->
+                <div class="container my-5">
+                    <div class="card shadow-sm border-0 p-4 bg-white rounded-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 border-bottom pb-3">
+                            <h2 class="h3 mb-0 text-primary fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Κατάλογος Προγραμμάτων</h2>
+                            
+                            <!-- Year Selection -->
+                            <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+                                <label for="publicYearSelect" class="fw-semibold text-muted mb-0">Σχολικό Έτος:</label>
+                                <select id="publicYearSelect" class="form-select form-select-sm w-auto">
+                                    <option value="">Τρέχον Έτος (Ενεργό)</option>
+                                    <?php foreach ($availableYears as $y): ?>
+                                        <option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Catalog View Modes -->
+                        <div id="catalog_list_view">
+                            <!-- Loading Spinner -->
+                            <div id="catalog_loading" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Φόρτωση...</span>
+                                </div>
+                                <p class="text-muted mt-2">Φορτώνει ο κατάλογος προγραμμάτων...</p>
+                            </div>
+
+                            <!-- Catalog Items Grid -->
+                            <div id="catalog_items" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" style="display: none;">
+                                <!-- Will be populated by JS -->
+                            </div>
+                            
+                            <!-- Empty Message -->
+                            <div id="catalog_empty" class="alert alert-info text-center py-4" style="display: none;">
+                                <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                                Δεν βρέθηκαν δημοσιευμένα προγράμματα για το επιλεγμένο έτος.
+                            </div>
+                        </div>
+
+                        <!-- Catalog Detail View (hidden initially) -->
+                        <div id="catalog_detail_view" style="display: none;">
+                            <button type="button" id="btn_catalog_back" class="btn btn-outline-secondary mb-4">
+                                <i class="bi bi-arrow-left me-1"></i>Πίσω στον κατάλογο
+                            </button>
+                            <div class="border rounded-3 p-4 bg-light">
+                                <div class="mb-3">
+                                    <span id="detail_school_badge" class="badge bg-secondary mb-2 fs-6"></span>
+                                    <h3 id="detail_program_title" class="text-dark fw-bold mb-1"></h3>
+                                    <span id="detail_category_badge" class="badge bg-primary"></span>
+                                </div>
+                                <hr>
+                                <div class="my-4">
+                                    <h5 class="fw-bold text-secondary">Παρουσίαση Προγράμματος:</h5>
+                                    <p id="detail_description_text" class="text-dark" style="line-height: 1.6; font-size: 1.05rem; white-space: pre-wrap;"></p>
+                                </div>
+                                <div id="detail_images_section" class="mt-4">
+                                    <h5 class="fw-bold text-secondary mb-3">Φωτογραφίες:</h5>
+                                    <div id="detail_images_grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+                                        <!-- Images populated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
 				<footer class="footer">
 					<div class="container d-flex justify-content-center align-items-center gap-2">
                         <span>&copy; <?= date("Y") ?> ΔΙ.Π.Ε. Ηρακλείου - Τμήμα Δ' Πληροφορικής</span>
@@ -182,45 +290,24 @@ if (!$prDebug) {
                         </a>
 					</div>
 				</footer>
+                
+                <script src="https://code.jquery.com/jquery-3.7.1.js" type="text/javascript"></script>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                <script src="script.js?v=<?= time() ?>_public" type="text/javascript"></script>
 			</body>
 		</html>
 	<?php
 	die();
-	endif;
+endif;
 
-	// force CAS authentication if button was pressed but not authenticated
-	if (!$isAuthenticated) {
-	    phpCAS::forceAuthentication();
-    }
-
-	// at this step, the user has been authenticated by the CAS server
-	$_SESSION['loggedin'] = 1;
-} else {
-    $_SESSION['loggedin'] = 1;
-}
+$_SESSION['loggedin'] = 1;
 
 // Check for records to enable dynamic titles in <head>
-$conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+$conn = db_connect();
 $isArchive = false;
-$availableYears = [];
-if ($conn->connect_error) {
-    // Fail silently or handle error later
-} else {
-    $tableQuery = $conn->query("SHOW TABLES LIKE 'progs\_%'");
-    if ($tableQuery) {
-        while ($t = $tableQuery->fetch_array()) {
-            $year = str_replace('progs_', '', $t[0]);
-            // Only add if it matches YYYY-YY format (e.g. 2024-25)
-            if (preg_match('/^\d{4}-\d{2}$/', $year)) {
-                $availableYears[] = $year;
-            }
-        }
-    }
-    if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
-        $prTable = 'progs_' . $_GET['year'];
-        $isArchive = true;
-        $prSxetos = $_GET['year']; // Override title
-    }
+if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
+    $isArchive = true;
 }
 ?>
 <!DOCTYPE html>
@@ -230,6 +317,7 @@ if ($conn->connect_error) {
     <title><?php echo 'Προγράμματα Σχολικών Δραστηριοτήτων ' . $prSxetos; ?></title>
     <!-- Include Bootstrap CSS and DataTables.net CSS here -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css?v=<?= time() ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css" />
 		<link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.css" />
 		<link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.1/css/buttons.dataTables.css" />
@@ -522,7 +610,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-						<form id="editForm">
+						<form id="editForm" enctype="multipart/form-data">
             <div class="modal-body">
                 <!-- Edit record details content with tabs -->
                 <ul class="nav nav-tabs" id="editTabs" role="tablist">
@@ -540,6 +628,9 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="status-tab" data-bs-toggle="tab" href="#status" role="tab" aria-controls="status" aria-selected="false">Κατάσταση</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="publish-tab" data-bs-toggle="tab" href="#publish" role="tab" aria-controls="publish" aria-selected="false">Δημοσίευση στον κατάλογο</a>
                     </li>
                 </ul>
                 <div class="tab-content" id="editTabsContent">
@@ -791,6 +882,28 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 														<option value="Ναι">Ναι</option>
 													</select>
 												</div>
+                    </div>
+                    <div class="tab-pane fade" id="publish" role="tabpanel" aria-labelledby="publish-tab">
+                        <div class="form-check mb-3 mt-3">
+                            <input class="form-check-input" type="checkbox" id="publish_check">
+                            <label class="form-check-label fw-bold" for="publish_check">Επιθυμώ δημοσίευση στον κατάλογο</label>
+                            <input type="hidden" id="publish" name="publish" value="Όχι">
+                        </div>
+                        <div id="catalog_fields_wrapper" style="display: none;">
+                            <div class="form-group mb-3">
+                                <label for="publish_text" class="fw-bold">Παρουσίαση προγράμματος (έως 800 λέξεις) * <span id="word_count_label" class="text-muted small">(0 / 800 λέξεις)</span></label>
+                                <textarea class="form-control" id="publish_text" name="publish_text" rows="8" placeholder="Γράψτε μια σύντομη περιγραφή του προγράμματος..."></textarea>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="publish_files" class="fw-bold">Φωτογραφίες (έως 8MB ανά αρχείο)</label>
+                                <input class="form-control" type="file" id="publish_files" name="publish_files[]" multiple accept="image/*">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="fw-bold">Υπάρχουσες Φωτογραφίες</label>
+                                <div id="publish_images_preview" class="d-flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+                            <input type="hidden" id="deleted_images" name="deleted_images" value="[]">
+                        </div>
                     </div>
                 </div>
             </div> <!-- of modal body -->
