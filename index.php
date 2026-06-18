@@ -220,15 +220,25 @@ if (!$isAuthenticated):
                         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 border-bottom pb-3">
                             <h2 class="h3 mb-0 text-primary fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Κατάλογος Προγραμμάτων</h2>
                             
-                            <!-- Year Selection -->
-                            <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
-                                <label for="publicYearSelect" class="fw-semibold text-muted mb-0">Σχολικό Έτος:</label>
-                                <select id="publicYearSelect" class="form-select form-select-sm w-auto">
-                                    <option value="">Τρέχον Έτος (Ενεργό)</option>
-                                    <?php foreach ($availableYears as $y): ?>
-                                        <option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                            <!-- Search and Year Selection -->
+                            <div class="d-flex flex-wrap align-items-center gap-3 mt-2 mt-sm-0">
+                                <!-- Search Box -->
+                                <div class="input-group input-group-sm w-auto">
+                                    <span class="input-group-text bg-light border-secondary-subtle"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" id="catalogSearchInput" class="form-control form-control-sm" placeholder="Αναζήτηση σχολείου ή τίτλου..." aria-label="Αναζήτηση">
+                                    <button class="btn btn-outline-secondary border-secondary-subtle d-none" type="button" id="btn_clear_search"><i class="bi bi-x"></i></button>
+                                </div>
+                                
+                                <!-- Year Selection -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <label for="publicYearSelect" class="fw-semibold text-muted mb-0">Σχολικό Έτος:</label>
+                                    <select id="publicYearSelect" class="form-select form-select-sm w-auto">
+                                        <option value="">Τρέχον Έτος (Ενεργό)</option>
+                                        <?php foreach ($availableYears as $y): ?>
+                                            <option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 

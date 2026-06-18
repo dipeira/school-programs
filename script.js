@@ -820,33 +820,123 @@ $(document).ready(function() {
         printContents += "<div style='margin-top: 30px; text-align: right; font-style: italic; font-size: 0.8em;'>Ημερομηνία Εκτύπωσης: " + new Date().toLocaleString() + "</div>";
         printContents += "</div>";
 
-        var printWindow = window.open('', '_blank');
-        printWindow.document.write('<html><head><title>Εκτύπωση Προγράμματος</title>');
-        printWindow.document.write('<style>@media print { @page { size: A4; margin: 2cm; } body { font-family: Arial, sans-serif; } #print-area { width: 100%; } h2 { color: #000; } h3 { font-size: 1.2em; page-break-after: avoid; } .form-group { margin-bottom: 10px; } } </style>');
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(printContents);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        
-        setTimeout(function() {
-            printWindow.print();
-        }, 300);
-    });
-
-    var urlParams = new URLSearchParams(window.location.search);
-    var isAdmin = $('#isAdmin').val() === '1';
-    
-    if (urlParams.get('year')) {
-        $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
-        if (!isAdmin) {
-            $('.btn-vev').addClass('d-none');
-        }
-    }
-
-
-    // ==========================================
+        var p    // ==========================================
     // Public Catalog Script Logic
     // ==========================================
+    var currentCatalogData = [];
+
+    function stripGreekAccents(str) {
+        if (!str) return '';
+        return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function renderCatalog() {
+        var searchTerm = stripGreekAccents($('#catalogSearchInput').val() || '').trim();
+        
+        // Show/hide clear button
+        if (searchTerm.length > 0) {
+            $('#btn_clear_search').removeClass('d-none');
+        } else {
+            $('#btn_clear_search').addClass('d-none');
+        }
+
+        var filteredData = currentCatalogData.filter(function(item) {
+            if (!searchTerm) return true;
+            
+            var schoolName = stripGreekAccents(item.school_name || '');
+            var programTitle = stripGreekAccents(item.titel || '');
+            
+            return schoolName.indexOf(searchTerm) !== -1 || programTitle.indexOf(searchTerm) !== -1;
+        });
+
+        $('#catalog_items').empty();
+        $('#catalog_empty').hide();
+
+        if (filteredData.length === 0) {
+            $('#catalog_empty').show();
+            return;
+        }
+
+        $.each(filteredData, function(index, item) {
+            var images = [];
+            try {
+                if (item.publish_images) {
+                    images = JSON.parse(item.publish_images);
+                }
+            } catch (e) {}
+
+            var firstImg = (images && images.length > 0) ? images[0] : 'https://placehold.co/600x400/ecefe6/333333?text=Πρόγραμμα+Δραστηριοτήτων';
+
+            var cardHtml = 
+                '<div class="col">' +
+                    '<div class="card catalog-card h-100">' +
+                        '<img src="' + firstImg + '" class="card-img-top" alt="Program Image" style="height: 180px; object-fit: cover;">' +
+                        '<div class="card-body d-flex flex-column">' +
+                            '<div class="school-name">' + htmlEntities(item.school_name) + '</div>' +
+                            '<h5 class="program-title">' + htmlEntities(item.titel) + '</h5>' +
+                            '<div class="mt-auto">' +
+                                '<span class="badge bg-primary mb-2">' + htmlEntities(item.categ) + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="card-footer bg-light">' +
+                            '<button type="button" class="btn btn-primary btn-sm btn-view-program w-100" data-pid="' + item.pid + '"><i class="bi bi-eye me-1"></i>Προβολή</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            $('#catalog_items').append(cardHtml);
+        });
+
+        // Display Details Click Handler
+        $('.btn-view-program').off('click').on('click', function() {
+            var pid = $(this).data('pid');
+            var matched = null;
+            for (var i = 0; i < currentCatalogData.length; i++) {
+                if (currentCatalogData[i].pid == pid) {
+                    matched = currentCatalogData[i];
+                    break;
+                }
+            }
+
+            if (matched) {
+                $('#detail_school_badge').text(matched.school_name);
+                $('#detail_program_title').text(matched.titel);
+                $('#detail_category_badge').text(matched.categ);
+                $('#detail_description_text').text(matched.publish_text || '');
+
+                var detailImages = [];
+                try {
+                    if (matched.publish_images) {
+                        detailImages = JSON.parse(matched.publish_images);
+                    }
+                } catch (e) {}
+
+                var $gallery = $('#detail_images_grid');
+                $gallery.empty();
+                if (detailImages && detailImages.length > 0) {
+                    $('#detail_images_section').show();
+                    $.each(detailImages, function(idx, src) {
+                        var imgCol = 
+                            '<div class="col">' +
+                                '<img src="' + src + '" class="img-fluid detail-gallery-img" alt="Gallery Image">' +
+                            '</div>';
+                        $gallery.append(imgCol);
+                    });
+                } else {
+                    $('#detail_images_section').hide();
+                }
+
+                // Transition views
+                $('#catalog_list_view').fadeOut(200, function() {
+                    $('#catalog_detail_view').fadeIn(200);
+                    $('html, body').animate({
+                        scrollTop: $('#catalog_detail_view').offset().top - 20
+                    }, 300);
+                });
+            }
+        });
+    }
+
     if ($('#catalog_items').length) {
         var defaultYear = $('#publicYearSelect').val() || '';
         loadPublicCatalog(defaultYear);
@@ -854,7 +944,18 @@ $(document).ready(function() {
 
     $(document).on('change', '#publicYearSelect', function() {
         var selectedYear = $(this).val() || '';
+        $('#catalogSearchInput').val(''); // Clear search box when changing year
+        $('#btn_clear_search').addClass('d-none');
         loadPublicCatalog(selectedYear);
+    });
+
+    $(document).on('input', '#catalogSearchInput', function() {
+        renderCatalog();
+    });
+
+    $(document).on('click', '#btn_clear_search', function() {
+        $('#catalogSearchInput').val('');
+        renderCatalog();
     });
 
     function loadPublicCatalog(year) {
@@ -871,90 +972,8 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(data) {
                 $('#catalog_loading').hide();
-                if (!data || data.length === 0) {
-                    $('#catalog_empty').show();
-                    return;
-                }
-
-                $.each(data, function(index, item) {
-                    var images = [];
-                    try {
-                        if (item.publish_images) {
-                            images = JSON.parse(item.publish_images);
-                        }
-                    } catch (e) {}
-
-                    var firstImg = (images && images.length > 0) ? images[0] : 'https://placehold.co/600x400/ecefe6/333333?text=Πρόγραμμα+Δραστηριοτήτων';
-
-                    var cardHtml = 
-                        '<div class="col">' +
-                            '<div class="card catalog-card h-100">' +
-                                '<img src="' + firstImg + '" class="card-img-top" alt="Program Image" style="height: 180px; object-fit: cover;">' +
-                                '<div class="card-body d-flex flex-column">' +
-                                    '<div class="school-name">' + htmlEntities(item.school_name) + '</div>' +
-                                    '<h5 class="program-title">' + htmlEntities(item.titel) + '</h5>' +
-                                    '<div class="mt-auto">' +
-                                        '<span class="badge bg-primary mb-2">' + htmlEntities(item.categ) + '</span>' +
-                                    '</div>' +
-                                '</div>' +
-                                '<div class="card-footer bg-light">' +
-                                    '<button type="button" class="btn btn-primary btn-sm btn-view-program w-100" data-pid="' + item.pid + '"><i class="bi bi-eye me-1"></i>Προβολή</button>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>';
-
-                    $('#catalog_items').append(cardHtml);
-                });
-
-                // Display Details Click Handler
-                $('.btn-view-program').on('click', function() {
-                    var pid = $(this).data('pid');
-                    var matched = null;
-                    for (var i = 0; i < data.length; i++) {
-                        if (data[i].pid == pid) {
-                            matched = data[i];
-                            break;
-                        }
-                    }
-
-                    if (matched) {
-                        $('#detail_school_badge').text(matched.school_name);
-                        $('#detail_program_title').text(matched.titel);
-                        $('#detail_category_badge').text(matched.categ);
-                        $('#detail_description_text').text(matched.publish_text || '');
-
-                        var detailImages = [];
-                        try {
-                            if (matched.publish_images) {
-                                detailImages = JSON.parse(matched.publish_images);
-                            }
-                        } catch (e) {}
-
-                        var $gallery = $('#detail_images_grid');
-                        $gallery.empty();
-                        if (detailImages && detailImages.length > 0) {
-                            $('#detail_images_section').show();
-                            $.each(detailImages, function(idx, src) {
-                                var imgCol = 
-                                    '<div class="col">' +
-                                        '<img src="' + src + '" class="img-fluid detail-gallery-img" alt="Gallery Image">' +
-                                    '</div>';
-                                $gallery.append(imgCol);
-                            });
-                        } else {
-                            $('#detail_images_section').hide();
-                        }
-
-                        // Transition views
-                        $('#catalog_list_view').fadeOut(200, function() {
-                            $('#catalog_detail_view').fadeIn(200);
-                            $('html, body').animate({
-                                scrollTop: $('#catalog_detail_view').offset().top - 20
-                            }, 300);
-                        });
-                    }
-                });
-
+                currentCatalogData = data || [];
+                renderCatalog();
                 $('#catalog_items').fadeIn(200);
             },
             error: function() {
