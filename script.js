@@ -1033,6 +1033,13 @@ $(document).ready(function() {
         renderCatalog();
     });
 
+    // Lightbox image preview handler
+    $(document).on('click', '.detail-gallery-img', function() {
+        var src = $(this).attr('src');
+        $('#lightboxImage').attr('src', src);
+        $('#lightboxModal').modal('show');
+    });
+
     $(document).on('click', '.btn-catalog-page', function(e) {
         e.preventDefault();
         var targetPage = parseInt($(this).data('page'));

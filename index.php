@@ -310,6 +310,20 @@ if (!$isAuthenticated):
 					</div>
 				</footer>
                 
+                <!-- Lightbox Modal for Public Catalog Images -->
+                <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-xl">
+                        <div class="modal-content bg-transparent border-0">
+                            <div class="modal-header border-0 p-0 position-relative">
+                                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 fs-4" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1055;"></button>
+                            </div>
+                            <div class="modal-body p-0 text-center">
+                                <img id="lightboxImage" src="" class="img-fluid rounded-3 shadow-lg" alt="Full Resolution" style="max-height: 90vh; max-width: 100%; object-fit: contain; border: 3px solid #ffffff; background-color: #000000;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <script src="https://code.jquery.com/jquery-3.7.1.js" type="text/javascript"></script>
                 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
                 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
