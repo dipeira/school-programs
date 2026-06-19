@@ -345,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
         foreach ($deleted as $del_img) {
             $del_img = str_replace('\\', '/', $del_img);
             if (strpos($del_img, 'uploads/img_') === 0 && !strpos($del_img, '..')) {
-                $full_path = 'c:/xampp/htdocs/school-programs/' . $del_img;
+                $full_path = __DIR__ . '/' . $del_img;
                 if (file_exists($full_path)) {
                     @unlink($full_path);
                 }
