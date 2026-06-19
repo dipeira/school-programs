@@ -238,6 +238,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($options);
 
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_temp_images') {
+    // Process uploaded files and validate size and count
+    $existing_count = isset($_POST['existing_count']) ? (int)$_POST['existing_count'] : 0;
+    
+    if (!isset($_FILES['publish_files'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => 'Δεν επιλέχθηκαν αρχεία.']);
+        exit;
+    }
+    
+    $files = $_FILES['publish_files'];
+    if (isset($files['name']) && !is_array($files['name'])) {
+        $files = [
+            'name' => [$files['name']],
+            'type' => [$files['type']],
+            'tmp_name' => [$files['tmp_name']],
+            'error' => [$files['error']],
+            'size' => [$files['size']]
+        ];
+    }
+    
+    if (isset($files['name']) && is_array($files['name'])) {
+        $num_files = count($files['name']);
+        if ($existing_count + $num_files > 8) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Μπορείτε να ανεβάσετε έως 8 φωτογραφίες συνολικά.']);
+            exit;
+        }
+        
+        // Validate combined file size limit
+        $total_size = 0;
+        for ($i = 0; $i < $num_files; $i++) {
+            if (isset($files['error'][$i]) && $files['error'][$i] === UPLOAD_ERR_OK) {
+                $total_size += $files['size'][$i];
+            }
+        }
+        if ($total_size > 8388608) { // 8MB
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Το συνολικό μέγεθος των επιλεγμένων αρχείων υπερβαίνει το όριο των 8MB!']);
+            exit;
+        }
+        
+        // Check allowed formats
+        for ($i = 0; $i < $num_files; $i++) {
+            if (isset($files['error'][$i]) && $files['error'][$i] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                if (!in_array($ext, $allowed)) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['success' => false, 'error' => 'Μη επιτρεπτός τύπος αρχείου: ' . htmlspecialchars($files['name'][$i])]);
+                    exit;
+                }
+            }
+        }
+        
+        $new_paths = [];
+        if (!file_exists('uploads')) {
+            mkdir('uploads', 0777, true);
+        }
+        
+        for ($i = 0; $i < $num_files; $i++) {
+            if (isset($files['error'][$i]) && $files['error'][$i] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($files['name'][$i], PATHINFO_EXTENSION));
+                $unique_name = 'uploads/img_' . uniqid() . '_' . time() . '_' . $i . '.' . $ext;
+                if (move_uploaded_file($files['tmp_name'][$i], $unique_name)) {
+                    $new_paths[] = $unique_name;
+                }
+            }
+        }
+        
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'paths' => $new_paths]);
+        exit;
+    } else {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => 'Σφάλμα κατά τη μεταφόρτωση.']);
+        exit;
+    }
+
 // POST preprocessing for file uploads and deletes
 } else if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
     // Process file uploads and deleted images
@@ -245,7 +324,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     $mysqli = db_connect();
     
     $uploaded_paths = [];
-    if ($recordId > 0) {
+    if (isset($_POST['publish_images'])) {
+        $uploaded_paths = json_decode($_POST['publish_images'], true) ?: [];
+    } else if ($recordId > 0) {
         $stmt = $mysqli->prepare("SELECT publish_images FROM `$prTable` WHERE id = ?");
         if ($stmt) {
             $stmt->bind_param('i', $recordId);

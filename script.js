@@ -1,6 +1,23 @@
 $(document).ready(function() {
     const formatDate = inputDate => inputDate.split('-').reverse().join('/');
     var deletedImagesTrack = [];
+    var currentImages = [];
+
+    function renderPublishImages(isReadOnly) {
+        var $preview = $('#publish_images_preview');
+        $preview.empty();
+        if (Array.isArray(currentImages)) {
+            $.each(currentImages, function(index, imgPath) {
+                var $wrapper = $('<div class="img-preview-wrapper" data-path="' + imgPath + '"></div>');
+                $wrapper.append('<img src="' + imgPath + '" alt="Preview">');
+                if (!isReadOnly) {
+                    var $removeBtn = $('<button type="button" class="remove-img-btn"><i class="bi bi-trash"></i></button>');
+                    $wrapper.append($removeBtn);
+                }
+                $preview.append($wrapper);
+            });
+        }
+    }
 
     function confirmDelete(recordId) {
         // Show SweetAlert confirmation dialog
@@ -183,9 +200,12 @@ $(document).ready(function() {
         
         // Reset catalog specific fields
         deletedImagesTrack = [];
+        currentImages = [];
         $('#deleted_images').val('[]');
+        $('#publish_images').val('[]');
         $('#publish_images_preview').empty();
         $('#publish_files').val('');
+        $('#upload_status').text('');
         $('#publish_check').prop('checked', false);
         $('#publish_input').val('Όχι');
         $('#catalog_fields_wrapper').hide();
@@ -216,9 +236,12 @@ $(document).ready(function() {
 
         // Reset catalog inputs on load
         deletedImagesTrack = [];
+        currentImages = [];
         $('#deleted_images').val('[]');
+        $('#publish_images').val('[]');
         $('#publish_images_preview').empty();
         $('#publish_files').val('');
+        $('#upload_status').text('');
 
         // Use AJAX to get record details and populate the edit modal
         $.get('db.php', { id: recordId, year: archiveYear }, function(data) { 
@@ -267,36 +290,28 @@ $(document).ready(function() {
             updateWordCount();
 
             // Render existing images
-            var existingImages = [];
+            currentImages = [];
             try {
                 if (data.publish_images) {
-                    existingImages = JSON.parse(data.publish_images);
+                    currentImages = JSON.parse(data.publish_images);
                 }
             } catch (e) {
                 console.error("Error parsing publish_images JSON", e);
             }
-            
-            var $preview = $('#publish_images_preview');
-            $preview.empty();
-            if (Array.isArray(existingImages)) {
-                $.each(existingImages, function(index, imgPath) {
-                    var $wrapper = $('<div class="img-preview-wrapper" data-path="' + imgPath + '"></div>');
-                    $wrapper.append('<img src="' + imgPath + '" alt="Preview">');
-                    var $removeBtn = $('<button type="button" class="remove-img-btn"><i class="bi bi-trash"></i></button>');
-                    $wrapper.append($removeBtn);
-                    $preview.append($wrapper);
-                });
-            }
+            $('#publish_images').val(JSON.stringify(currentImages));
+            renderPublishImages(triggeredClass === 'view-record');
         });
 
         // if view, disable all inputs
         if (triggeredClass === 'view-record') {
             $("#editForm :input").prop("disabled", true);
+            $('#upload_images_btn').prop("disabled", true).hide();
             $('.modal-title').text('Προβολή προγράμματος');
             $('.save-btn').hide();
             $('.close-btn').prop("disabled", false);
         } else {
             $("#editForm :input").prop("disabled", false);
+            $('#upload_images_btn').prop("disabled", false).show();
             // disable #vev if canVev is not set
             if (!$(this).data('canvev')){
                 $("#vev").prop("disabled", true);
@@ -345,16 +360,20 @@ $(document).ready(function() {
     }
     $(document).on('input propertychange', '#publish_text', updateWordCount);
 
-    // Validate size limit (max 8MB per image)
+    // Validate selected files (individual size < 8MB, and total files count constraint on select)
     $(document).on('change', '#publish_files', function() {
         var files = this.files;
+        if (!files || files.length === 0) return;
+        
         var limitExceeded = false;
+        var totalSize = 0;
         for (var i = 0; i < files.length; i++) {
+            totalSize += files[i].size;
             if (files[i].size > 8388608) { // 8MB
                 limitExceeded = true;
-                break;
             }
         }
+        
         if (limitExceeded) {
             Swal.fire({
                 title: 'Προσοχή!',
@@ -363,13 +382,145 @@ $(document).ready(function() {
                 confirmButtonText: 'Εντάξει'
             });
             $(this).val('');
+            return;
         }
+
+        if (totalSize > 8388608) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Το συνολικό μέγεθος των επιλεγμένων αρχείων υπερβαίνει το όριο των 8MB!',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            $(this).val('');
+            return;
+        }
+
+        if (currentImages.length + files.length > 8) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Μπορείτε να ανεβάσετε έως 8 φωτογραφίες συνολικά. Ήδη υπάρχουν ' + currentImages.length + ' φωτογραφίες.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            $(this).val('');
+            return;
+        }
+    });
+
+    // Handle AJAX image uploading when clicking "Μεταφόρτωση"
+    $(document).on('click', '#upload_images_btn', function() {
+        var filesInput = document.getElementById('publish_files');
+        if (!filesInput || !filesInput.files || filesInput.files.length === 0) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Παρακαλούμε επιλέξτε τουλάχιστον μία φωτογραφία.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        var files = filesInput.files;
+
+        // Verify count and size limits before proceeding
+        var totalCount = currentImages.length + files.length;
+        if (totalCount > 8) {
+            Swal.fire({
+                title: 'Σφάλμα!',
+                text: 'Μπορείτε να ανεβάσετε έως 8 φωτογραφίες συνολικά. Ήδη υπάρχουν ' + currentImages.length + ' φωτογραφίες.',
+                icon: 'error',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        var totalSize = 0;
+        for (var i = 0; i < files.length; i++) {
+            totalSize += files[i].size;
+        }
+        if (totalSize > 8388608) {
+            Swal.fire({
+                title: 'Σφάλμα!',
+                text: 'Το συνολικό μέγεθος των επιλεγμένων αρχείων υπερβαίνει το όριο των 8MB!',
+                icon: 'error',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        // Disable button & show loading state
+        var $btn = $(this);
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp;Μεταφόρτωση...');
+        $('#upload_status').removeClass('text-danger text-success').addClass('text-muted').text('Γίνεται μεταφόρτωση των αρχείων, παρακαλώ περιμένετε...');
+
+        var uploadData = new FormData();
+        uploadData.append('action', 'upload_temp_images');
+        uploadData.append('existing_count', currentImages.length);
+        for (var i = 0; i < files.length; i++) {
+            uploadData.append('publish_files[]', files[i]);
+        }
+
+        $.ajax({
+            url: 'db.php',
+            type: 'POST',
+            data: uploadData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response) {
+                $btn.prop('disabled', false).html('<i class="bi bi-upload"></i>&nbsp;Μεταφόρτωση');
+                if (response.success) {
+                    // Append new image paths
+                    $.each(response.paths, function(index, path) {
+                        currentImages.push(path);
+                    });
+                    $('#publish_images').val(JSON.stringify(currentImages));
+                    renderPublishImages(false);
+                    
+                    // Reset file input
+                    $('#publish_files').val('');
+                    
+                    // Show success status
+                    $('#upload_status').removeClass('text-muted text-danger').addClass('text-success').text('Η μεταφόρτωση ολοκληρώθηκε με επιτυχία!');
+                    setTimeout(function() {
+                        $('#upload_status').text('');
+                    }, 4000);
+                } else {
+                    $('#upload_status').removeClass('text-muted text-success').addClass('text-danger').text('Σφάλμα: ' + response.error);
+                    Swal.fire({
+                        title: 'Σφάλμα!',
+                        text: response.error,
+                        icon: 'error',
+                        confirmButtonText: 'Εντάξει'
+                    });
+                }
+            },
+            error: function(err) {
+                $btn.prop('disabled', false).html('<i class="bi bi-upload"></i>&nbsp;Μεταφόρτωση');
+                $('#upload_status').removeClass('text-muted text-success').addClass('text-danger').text('Σφάλμα σύνδεσης κατά τη μεταφόρτωση.');
+                Swal.fire({
+                    title: 'Σφάλμα!',
+                    text: 'Παρουσιάστηκε σφάλμα κατά τη μεταφόρτωση των αρχείων.',
+                    icon: 'error',
+                    confirmButtonText: 'Εντάξει'
+                });
+            }
+        });
     });
 
     // Handle existing image removal
     $(document).on('click', '.remove-img-btn', function() {
         var $wrapper = $(this).closest('.img-preview-wrapper');
         var path = $wrapper.data('path');
+        
+        // Remove from currentImages
+        var index = currentImages.indexOf(path);
+        if (index > -1) {
+            currentImages.splice(index, 1);
+        }
+        $('#publish_images').val(JSON.stringify(currentImages));
+        
         deletedImagesTrack.push(path);
         $('#deleted_images').val(JSON.stringify(deletedImagesTrack));
         $wrapper.remove();
@@ -378,6 +529,18 @@ $(document).ready(function() {
     // editForm submit handler
     $('#editForm').submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
+
+        // Enforce two-step upload: check if there are selected files that haven't been uploaded
+        var filesInput = document.getElementById('publish_files');
+        if (filesInput && filesInput.files && filesInput.files.length > 0) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Έχετε επιλέξει φωτογραφίες χωρίς να τις μεταφορτώσετε. Παρακαλούμε πατήστε "Μεταφόρτωση" ή καθαρίστε την επιλογή αρχείων πριν την Αποθήκευση.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
 
         // Enforce word count limit on submit if publish enabled
         if ($('#publish_check').is(':checked')) {

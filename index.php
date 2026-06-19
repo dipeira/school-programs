@@ -930,13 +930,18 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                                 <textarea class="form-control" id="publish_text" name="publish_text" rows="8" placeholder="Γράψτε μια σύντομη περιγραφή του προγράμματος..."></textarea>
                             </div>
                             <div class="form-group mb-3">
-                                <label for="publish_files" class="fw-bold">Φωτογραφίες (έως 8MB ανά αρχείο)</label>
-                                <input class="form-control" type="file" id="publish_files" name="publish_files[]" multiple accept="image/*">
+                                <label for="publish_files" class="fw-bold">Φωτογραφίες (έως 8 φωτογραφίες, συνολικά έως 8MB)</label>
+                                <div class="input-group">
+                                    <input class="form-control" type="file" id="publish_files" name="publish_files[]" multiple accept="image/*">
+                                    <button class="btn btn-outline-secondary btn-info text-white" type="button" id="upload_images_btn"><i class="bi bi-upload"></i>&nbsp;Μεταφόρτωση</button>
+                                </div>
+                                <div id="upload_status" class="mt-1 small"></div>
                             </div>
                             <div class="form-group mb-3">
-                                <label class="fw-bold">Υπάρχουσες Φωτογραφίες</label>
+                                <label class="fw-bold">Φωτογραφίες προγράμματος</label>
                                 <div id="publish_images_preview" class="d-flex flex-wrap gap-2 mt-2"></div>
                             </div>
+                            <input type="hidden" id="publish_images" name="publish_images" value="[]">
                             <input type="hidden" id="deleted_images" name="deleted_images" value="[]">
                         </div>
                     </div>
