@@ -197,6 +197,7 @@ $(document).ready(function() {
         $('#editTabs a[href="#school"]').tab('show');
         // enable all inputs (in case they're disabled)
         $("#editForm :input").prop("disabled", false);
+        $('#upload_images_btn').prop("disabled", false).show();
         
         // Reset catalog specific fields
         deletedImagesTrack = [];
