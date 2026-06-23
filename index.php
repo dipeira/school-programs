@@ -950,6 +950,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 						<div class="modal-footer">
 								<button type="button" class="btn btn-secondary btn-danger close-btn" data-bs-dismiss="modal"><i class="bi-x-circle"></i>&nbsp;Κλείσιμο</button>
 								<button type="submit" class="btn btn-primary btn-success save-btn"><i class="bi-save"></i>&nbsp;Αποθήκευση</button>
+						</div>
 						</form>
         </div> <!-- of modal content -->
     </div> <!-- of modal dialog -->
