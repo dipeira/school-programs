@@ -118,57 +118,44 @@ if (!$isAuthenticated):
                         display: flex;
                         flex-direction: column;
                     }
-                    .login-container {
-                        flex: 1;
+                    .login-header-bar {
+                        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                        color: #ffffff;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                    }
+                    .header-icon-box {
+                        background: rgba(255, 255, 255, 0.12);
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 10px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
+                        backdrop-filter: blur(5px);
                     }
-                    .login-card {
-                        background: #ffffff;
-                        border-radius: 16px;
-                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-                        padding: 3.5rem 2.5rem;
-                        max-width: 480px;
-                        width: 100%;
-                        text-align: center;
-                        border: 1px solid rgba(0,0,0,0.05);
-                    }
-                    .login-icon {
-                        font-size: 3.5rem;
-                        color: #0d6efd;
-                        margin-bottom: 1rem;
-                    }
-                    .title {
+                    .header-title {
                         font-weight: 700;
-                        color: #2b3440;
-                        font-size: 1.6rem;
-                        line-height: 1.3;
-                        margin-bottom: 0.5rem;
+                        font-size: 1.25rem;
+                        letter-spacing: -0.3px;
+                        color: #ffffff;
                     }
-                    .subtitle {
-                        color: #6c757d;
-                        font-size: 0.95rem;
-                        margin-bottom: 2rem;
+                    .header-subtitle {
+                        font-size: 0.82rem;
                     }
-                    .btn-login {
-                        padding: 0.8rem 1.5rem;
-                        font-weight: 600;
+                    .btn-login-nav {
                         border-radius: 8px;
-                        font-size: 1.05rem;
-                        transition: all 0.3s ease;
-                        background-color: #0d6efd;
+                        padding: 0.6rem 1.2rem;
+                        font-weight: 600;
+                        transition: all 0.25s ease;
+                        border: 1px solid rgba(255,255,255,0.2);
+                        background-color: #ffffff;
+                        color: #1e3c72 !important;
                     }
-                    .btn-login:hover {
-                        transform: translateY(-2px);
-                        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
-                        background-color: #0b5ed7;
-                    }
-                    .info-text {
-                        font-size: 0.85rem;
-                        color: #8fa0b5;
-                        margin-top: 1.5rem;
-                        line-height: 1.4;
+                    .btn-login-nav:hover {
+                        transform: translateY(-1px);
+                        box-shadow: 0 6px 15px rgba(255, 255, 255, 0.2);
+                        background-color: #f8f9fa;
                     }
                     .footer {
                         padding: 1.5rem 0;
@@ -192,27 +179,37 @@ if (!$isAuthenticated):
 			</head>
 			
 			<body>
-				<div class="login-container px-3">
-					<div class="login-card">
-                        <i class="bi bi-journal-bookmark-fill login-icon"></i>
-						<h1 class="title">Προγράμματα<br>Σχολικών Δραστηριοτήτων</h1>
-                        <span class="badge bg-primary mb-3 py-2 px-3 fw-medium">Έτος <?=$prSxetos?></span>
-						<p class="subtitle">
-							Σύστημα ελέγχου, διαχείρισης και αυτόματης έκδοσης βεβαιώσεων
-						</p>
-
-						<form id="login" action="index.php" method="post">
-							<button type="submit" class="btn btn-primary w-100 btn-login" name="login-btn">
-								<i class="bi bi-box-arrow-in-right me-2"></i>Είσοδος μέσω Π.Σ.Δ.
-							</button>
-						</form>
-
-                        <div class="info-text">
-						    <i class="bi bi-info-circle me-1"></i>Η είσοδος γίνεται με κωδικούς μονάδας (ΠΣΔ).<br>
-                            ΟΧΙ με προσωπικούς κωδικούς ή MySchool.
-						</div>
-					</div>
-				</div>
+                <!-- Sleek Premium Top Login/Header Bar -->
+                <header class="login-header-bar py-3 px-4 shadow-sm">
+                    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <!-- Left Side: Title & Description -->
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="header-icon-box">
+                                <i class="bi bi-journal-bookmark-fill text-white fs-4"></i>
+                            </div>
+                            <div>
+                                <h1 class="header-title mb-0">Προγράμματα Σχολικών Δραστηριοτήτων</h1>
+                                <p class="header-subtitle mb-0 text-white-50 d-none d-md-block">
+                                    Σύστημα ελέγχου, διαχείρισης και αυτόματης έκδοσης βεβαιώσεων
+                                </p>
+                            </div>
+                            <span class="badge bg-light text-primary fw-semibold px-2 py-1 ms-2">Έτος <?=$prSxetos?></span>
+                        </div>
+                        
+                        <!-- Right Side: Login Button & Info -->
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="text-end d-none d-lg-block text-white-50 small" style="line-height: 1.3;">
+                                <div><i class="bi bi-info-circle me-1"></i>Είσοδος με κωδικούς μονάδας (ΠΣΔ)</div>
+                                <div class="text-warning fw-semibold">Όχι προσωπικοί κωδικοί ή MySchool</div>
+                            </div>
+                            <form id="login" action="index.php" method="post" class="mb-0">
+                                <button type="submit" class="btn btn-light btn-login-nav" name="login-btn">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Είσοδος μέσω Π.Σ.Δ.
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </header>
 
                 <!-- Public Catalog Section -->
                 <div class="container my-5">
