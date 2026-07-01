@@ -111,6 +111,13 @@ $(document).ready(function() {
                             exportOptions: {
                                 columns: ':not(:last-child)'
                             }
+                        },
+                        {
+                            text: '<i class="bi bi-info-circle me-1"></i>Βοήθεια για τη Δημοσίευση στον Κατάλογο',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = 'help_catalog.php';
+                            },
+                            className: 'btn-info text-white'
                         }
                     ]
                 }
