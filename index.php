@@ -279,6 +279,40 @@ if (!$isAuthenticated):
                                     <h4 class="fw-bold text-dark mb-0">Οι σχολικές μονάδες δεν έχουν δημοσιεύσει ακόμα τις δράσεις τους για το τρέχον έτος.</h4>
                                 </div>
                             </div>
+
+                            <!-- Public Categories Showcase (Always Visible in Catalog List View) -->
+                            <div id="catalog_info_section" class="text-center py-4 border-top border-light-subtle mt-5">
+                                <h4 class="fw-bold text-secondary mb-4 text-center">Κατηγορίες Προγραμμάτων</h4>
+                                <div class="row row-cols-1 row-cols-md-3 g-4 mt-2 text-start justify-content-center" style="max-width: 900px; margin: 0 auto;">
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-danger border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-heart-pulse-fill text-danger fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Αγωγή Υγείας</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Θεματολογίες που αφορούν τη διατροφή, την πρόληψη, την ψυχική υγεία, την ασφάλεια και την κοινωνική ευεξία των μαθητών.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-success border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-tree-fill text-success fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Περιβαλλοντική Εκπαίδευση</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Δράσεις για την προστασία του περιβάλλοντος, την ανακύκλωση, την αειφορία και τη γνωριμία των παιδιών με τη φύση.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-warning border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-palette-fill text-warning fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Πολιτιστικά Θέματα</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Πρωτοβουλίες για τις τέχνες, το θέατρο, τη λογοτεχνία, την τοπική ιστορία, την παράδοση και την πολιτιστική κληρονομιά.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Catalog Detail View (hidden initially) -->
