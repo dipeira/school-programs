@@ -255,7 +255,7 @@ if (!$isAuthenticated):
                             </div>
                             
                             <!-- Catalog Pagination -->
-                            <div id="catalog_pagination" class="d-flex justify-content-center mt-5" style="display: none;">
+                            <div id="catalog_pagination" class="d-none justify-content-center mt-5">
                                 <nav aria-label="Catalog navigation">
                                     <ul id="catalog_pagination_list" class="pagination pagination-md justify-content-center mb-0">
                                         <!-- Will be populated by JS -->
@@ -263,10 +263,90 @@ if (!$isAuthenticated):
                                 </nav>
                             </div>
                             
-                            <!-- Empty Message -->
-                            <div id="catalog_empty" class="alert alert-info text-center py-4" style="display: none;">
+                            <!-- Empty Search Message -->
+                            <div id="catalog_empty_search" class="alert alert-info text-center py-4" style="display: none;">
                                 <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
-                                Δεν βρέθηκαν δημοσιευμένα προγράμματα για το επιλεγμένο έτος.
+                                Δεν βρέθηκαν προγράμματα που να ταιριάζουν με την αναζήτηση.
+                            </div>
+
+                            <!-- Empty Catalog (No Programs at All) Message -->
+                            <div id="catalog_empty_all" class="text-center py-5" style="display: none;">
+                                <!-- Simple Text Message -->
+                                <div class="empty-state-card p-5 mx-auto mb-5 rounded-4 shadow-sm border border-light-subtle bg-white" style="max-width: 700px;">
+                                    <div class="empty-icon-wrapper mb-4 d-inline-flex align-items-center justify-content-center">
+                                        <i class="bi bi-journal-x text-primary fs-1"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-dark mb-0">Οι σχολικές μονάδες δεν έχουν δημοσιεύσει ακόμα τις δράσεις τους για το τρέχον έτος.</h4>
+                                </div>
+                            </div>
+
+                            <!-- Public Onboarding Guide & Categories (Always Visible in Catalog List View) -->
+                            <div id="catalog_info_section" class="text-center py-4 border-top border-light-subtle mt-5">
+                                <!-- Onboarding Steps -->
+                                <h5 class="fw-bold text-secondary mb-4 text-center"><i class="bi bi-info-circle-fill text-primary me-2"></i>Πώς να καταχωρίσετε το Πρόγραμμά σας</h5>
+                                <div class="row row-cols-1 row-cols-md-3 g-4 mt-2 text-start justify-content-center" style="max-width: 900px; margin: 0 auto;">
+                                    <div class="col">
+                                        <div class="card border-0 bg-light-subtle h-100 p-4 rounded-3 shadow-sm card-step">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <span class="badge bg-primary rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width:30px; height:30px;">1</span>
+                                                <h6 class="fw-bold text-dark mb-0">Είσοδος στο Σύστημα</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Συνδεθείτε στην πλατφόρμα με τους επίσημους κωδικούς ΠΣΔ του σχολείου σας (κουμπί πάνω δεξιά).</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-light-subtle h-100 p-4 rounded-3 shadow-sm card-step">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <span class="badge bg-primary rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width:30px; height:30px;">2</span>
+                                                <h6 class="fw-bold text-dark mb-0">Καταχώριση Δράσης</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Συμπληρώστε τα στοιχεία της σχολικής δραστηριότητας, των εκπαιδευτικών και των μαθητών.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-light-subtle h-100 p-4 rounded-3 shadow-sm card-step">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <span class="badge bg-primary rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width:30px; height:30px;">3</span>
+                                                <h6 class="fw-bold text-dark mb-0">Δημοσίευση & Φωτογραφίες</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Ενεργοποιήστε την επιλογή "Δημοσίευση στον κατάλογο", γράψτε μια παρουσίαση και ανεβάστε έως 8 φωτογραφίες.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Showcase Categories -->
+                                <div class="mt-5 pt-4">
+                                    <h4 class="fw-bold text-secondary mb-4 text-center">Κατηγορίες Προγραμμάτων</h4>
+                                    <div class="row row-cols-1 row-cols-md-3 g-4 mt-2 text-start justify-content-center" style="max-width: 900px; margin: 0 auto;">
+                                        <div class="col">
+                                            <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-danger border-4">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <i class="bi bi-heart-pulse-fill text-danger fs-3 me-2"></i>
+                                                    <h6 class="fw-bold text-dark mb-0">Αγωγή Υγείας</h6>
+                                                </div>
+                                                <p class="text-muted small mb-0">Θεματολογίες που αφορούν τη διατροφή, την πρόληψη, την ψυχική υγεία, την ασφάλεια και την κοινωνική ευεξία των μαθητών.</p>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-success border-4">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <i class="bi bi-tree-fill text-success fs-3 me-2"></i>
+                                                    <h6 class="fw-bold text-dark mb-0">Περιβαλλοντική Εκπαίδευση</h6>
+                                                </div>
+                                                <p class="text-muted small mb-0">Δράσεις για την προστασία του περιβάλλοντος, την ανακύκλωση, την αειφορία και τη γνωριμία των παιδιών με τη φύση.</p>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-warning border-4">
+                                                <div class="d-flex align-items-center mb-3">
+                                                    <i class="bi bi-palette-fill text-warning fs-3 me-2"></i>
+                                                    <h6 class="fw-bold text-dark mb-0">Πολιτιστικά Θέματα</h6>
+                                                </div>
+                                                <p class="text-muted small mb-0">Πρωτοβουλίες για τις τέχνες, το θέατρο, τη λογοτεχνία, την τοπική ιστορία, την παράδοση και την πολιτιστική κληρονομιά.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

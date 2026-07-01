@@ -414,3 +414,47 @@ table.dataTable.table-striped > tbody > tr:hover > * {
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
 }
 
+/* Custom Empty State & Onboarding Styles */
+.empty-icon-wrapper {
+    background: rgba(67, 97, 238, 0.08);
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s ease;
+}
+
+.empty-state-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.empty-state-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
+}
+
+.empty-state-card:hover .empty-icon-wrapper {
+    transform: scale(1.08) rotate(8deg);
+    background-color: rgba(67, 97, 238, 0.12);
+}
+
+.card-step {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.03) !important;
+}
+
+.card-step:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06) !important;
+    background-color: #ffffff !important;
+    border-color: rgba(67, 97, 238, 0.15) !important;
+}
+
+.border-top.border-4 {
+    border-top-width: 4px !important;
+}
+

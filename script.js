@@ -1039,11 +1039,16 @@ $(document).ready(function() {
         });
 
         $('#catalog_items').empty();
-        $('#catalog_empty').hide();
-        $('#catalog_pagination').hide();
+        $('#catalog_empty_search').hide();
+        $('#catalog_empty_all').hide();
+        $('#catalog_pagination').removeClass('d-flex').addClass('d-none');
 
         if (filteredData.length === 0) {
-            $('#catalog_empty').show();
+            if (currentCatalogData.length === 0) {
+                $('#catalog_empty_all').show();
+            } else {
+                $('#catalog_empty_search').show();
+            }
             return;
         }
 
@@ -1090,7 +1095,7 @@ $(document).ready(function() {
         $paginationList.empty();
         
         if (totalPages > 1) {
-            $('#catalog_pagination').show();
+            $('#catalog_pagination').removeClass('d-none').addClass('d-flex');
             
             // Previous button
             var prevClass = (catalogCurrentPage === 1) ? 'disabled' : '';
@@ -1220,8 +1225,9 @@ $(document).ready(function() {
     function loadPublicCatalog(year) {
         $('#catalog_loading').show();
         $('#catalog_items').hide().empty();
-        $('#catalog_empty').hide();
-        $('#catalog_pagination').hide();
+        $('#catalog_empty_search').hide();
+        $('#catalog_empty_all').hide();
+        $('#catalog_pagination').removeClass('d-flex').addClass('d-none');
         $('#catalog_detail_view').hide();
         $('#catalog_list_view').show();
 
@@ -1239,7 +1245,7 @@ $(document).ready(function() {
             },
             error: function() {
                 $('#catalog_loading').hide();
-                $('#catalog_empty').text('Σφάλμα κατά τη φόρτωση του καταλόγου.').show();
+                $('#catalog_empty_search').text('Σφάλμα κατά τη φόρτωση του καταλόγου.').show();
             }
         });
     }
