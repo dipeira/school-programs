@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // ARCHIVE TABLE OPERATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'archive') {
-    if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
+    if (!isset($_SESSION['uid']) || $_SESSION['uid'] !== 'dipeira') {
         echo json_encode(['success' => false, 'error' => 'Unauthorized action. Admin rank required.']);
         exit;
     }
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // RESTORE TABLE OPERATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'restore') {
-    if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
+    if (!isset($_SESSION['uid']) || $_SESSION['uid'] !== 'dipeira') {
         echo json_encode(['success' => false, 'error' => 'Unauthorized action. Admin rank required.']);
         exit;
     }
