@@ -159,6 +159,17 @@ h4.school-title {
 .btn-info { background: linear-gradient(135deg, var(--info-color), #2eadd6); color: white; }
 .btn-secondary { background: linear-gradient(135deg, #6c757d, #495057); color: white; }
 
+/* Disabled button styles */
+button.dt-button.disabled, button.dt-button[disabled] {
+    opacity: 0.6 !important;
+    pointer-events: none !important;
+    background: #c3cfe2 !important;
+    color: #6c757d !important;
+    border: 1px solid #ced4da !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* DataTables Overrides */
 table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > * {
     background-color: rgba(67, 97, 238, 0.02);

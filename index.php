@@ -384,6 +384,20 @@ $isArchive = false;
 if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
     $isArchive = true;
 }
+
+$isProtocolSet = false;
+$stmt_meta = $conn->prepare("SELECT protocol, protocol_date FROM progs_metadata WHERE year_name = ?");
+if ($stmt_meta) {
+    $stmt_meta->bind_param('s', $prSxetos);
+    $stmt_meta->execute();
+    $res_meta = $stmt_meta->get_result();
+    if ($row_meta = $res_meta->fetch_assoc()) {
+        if (!empty($row_meta['protocol']) && !empty($row_meta['protocol_date']) && $row_meta['protocol_date'] !== '0000-00-00') {
+            $isProtocolSet = true;
+        }
+    }
+    $stmt_meta->close();
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -540,7 +554,7 @@ else {
                                 } else { echo '<td>'; }
 								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'" data-year="'.$archData.'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
                                 $vevDisabled = ($row['vev'] === 'Ναι') ? '' : ' disabled';
-								echo (($showVev && !$isArchive) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev'.$vevDisabled.'" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
+								echo (($showVev && $isProtocolSet) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev'.$vevDisabled.'" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
 								if (!$isArchive) echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
 								echo '</td>';
                 echo '</tr>';
@@ -1076,7 +1090,10 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 <!-- Add SweetAlert2 from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<input type="hidden" id="isProtocolSet" value="<?php echo $isProtocolSet ? '1' : '0'; ?>">
+<input type="hidden" id="selectedYear" value="<?php echo htmlspecialchars($prSxetos); ?>">
 <input type="hidden" id="isAdmin" value="<?php echo $_SESSION['admin'] ? '1' : '0'; ?>">
+<input type="hidden" id="showVev" value="<?php echo $showVev ? '1' : '0'; ?>">
 <script src="script.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
 </body>

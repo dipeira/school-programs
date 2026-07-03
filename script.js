@@ -113,6 +113,31 @@ $(document).ready(function() {
                             }
                         },
                         {
+                            text: '<i class="bi bi-file-earmark-zip me-1"></i>Βεβαιώσεις',
+                            action: function ( e, dt, node, config ) {
+                                var year = $('#selectedYear').val() || '';
+                                window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                            },
+                            className: 'btn-success text-white',
+                            init: function(dt, node, config) {
+                                var isProtocolSet = $('#isProtocolSet').val() === '1';
+                                var isAdmin = $('#isAdmin').val() === '1';
+                                var showVev = $('#showVev').val() === '1';
+
+                                // Enable button only if protocol is configured
+                                if (!isProtocolSet) {
+                                    this.disable();
+                                } else {
+                                    this.enable();
+                                }
+
+                                // Hide button completely if not admin and certificates are disabled globally
+                                if (!isAdmin && !showVev) {
+                                    this.node().addClass('d-none');
+                                }
+                            }
+                        },
+                        {
                             text: '<i class="bi bi-info-circle me-1"></i>Βοήθεια για τη Δημοσίευση στον Κατάλογο',
                             action: function ( e, dt, node, config ) {
                                 window.location.href = 'help_catalog.php';
@@ -260,8 +285,13 @@ $(document).ready(function() {
                 // Set the value of the form field
                 if (key === 'praxidate') {
                     $field.val(formatDate(value));
-                } else if ($field.length) {
-                    $field.val(value);
+                                } else if ($field.length) {
+                    if (key === 'vev' || key === 'chk') {
+                        var cleanVal = (value !== null && value !== undefined) ? String(value).trim() : '';
+                        $field.val(cleanVal);
+                    } else {
+                        $field.val(value);
+                    }
                 }
                 
                 if (fieldId === 'sch1') {
@@ -320,8 +350,8 @@ $(document).ready(function() {
         } else {
             $("#editForm :input").prop("disabled", false);
             $('#upload_images_btn').prop("disabled", false).show();
-            // disable #vev if canVev is not set
-            if (!$(this).data('canvev')){
+            // disable #vev if canVev is not set and user is not admin
+            if (!$(this).data('canvev') && !isAdmin){
                 $("#vev").prop("disabled", true);
             }
             $('.modal-title').text('Επεξεργασία προγράμματος');
@@ -897,6 +927,9 @@ $(document).ready(function() {
                             if (res.success) {
                                 showAlert("Επιτυχής αποθήκευση παραμέτρων!", 'success');
                                 $('#configModal').modal('hide');
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 1000);
                             } else {
                                 showAlert("Σφάλμα αποθήκευσης πρωτοκόλλων.", 'danger');
                             }
@@ -1009,9 +1042,6 @@ $(document).ready(function() {
     
     if (urlParams.get('year')) {
         $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
-        if (!isAdmin) {
-            $('.btn-vev').addClass('d-none');
-        }
     }
 
     // ==========================================

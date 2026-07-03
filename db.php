@@ -2,6 +2,29 @@
 session_start();
 require_once('conf.php'); // Include your configuration file
 
+function getTableName($yearParam) {
+    global $prTable;
+    if (empty($yearParam)) {
+        return $prTable;
+    }
+    // Load current school year from config.json
+    $jsonString = file_get_contents('config.json');
+    $configData = json_decode($jsonString, true);
+    $currentYear = '';
+    if ($configData) {
+        foreach ($configData as $item) {
+            if ($item['name'] === 'prSxetos') {
+                $currentYear = $item['value'];
+                break;
+            }
+        }
+    }
+    if ($yearParam === $currentYear) {
+        return $prTable;
+    }
+    return "progs_" . $yearParam;
+}
+
 // GET YEAR METADATA
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_metadata') {
     $mysqli = db_connect();
@@ -18,10 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 // GET CATALOG ACTION
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_catalog') {
     $year = isset($_GET['year']) ? preg_replace('/[^a-zA-Z0-9\-_]/', '', $_GET['year']) : '';
-    $catTable = $prTable;
-    if (!empty($year)) {
-        $catTable = "progs_" . $year;
-    }
+    $catTable = getTableName($year);
     $mysqli = db_connect();
     
     // Explicit selection of columns to prevent column name collisions (s.id overwriting p.id)
@@ -154,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // get program record
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     if (isset($_GET['year']) && !empty($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
-        $prTable = "progs_" . $_GET['year'];
+        $prTable = getTableName($_GET['year']);
     }
     // Retrieve the record ID from the GET request
     $recordId = (int)$_GET['id']; // Cast to integer for safety

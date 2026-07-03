@@ -1,4 +1,5 @@
 <?php
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 // Increase session timeout to 2 hours (7200 seconds) to prevent users from being signed out during slow typing
 ini_set('session.gc_maxlifetime', 7200);
 ini_set('session.cookie_lifetime', 0); // 0 means cookie expires when browser closes
@@ -63,7 +64,26 @@ if (isset($_GET['year']) && preg_match('/^[a-zA-Z0-9_\-]+$/', $_GET['year'])) {
     $prTable = "progs_" . $_GET['year'];
     $prSxetos = $_GET['year'];
 }
-$stmt = $conn->prepare("SELECT p.id, p.titel, p.nam1, p.categ, p.nam2, p.nam3, p.sch1, s1.name as s1name FROM `$prTable` p JOIN $schTable s1 ON p.sch1 = s1.id WHERE p.id = ?");
+$isLegacy = false;
+$checkSch1 = $conn->query("SHOW COLUMNS FROM `$prTable` LIKE 'sch1'");
+if ($checkSch1 && $checkSch1->num_rows == 0) {
+    $isLegacy = true; 
+}
+
+$vevCol = 'vev';
+if ($isLegacy) {
+    $checkAgree = $conn->query("SHOW COLUMNS FROM `$prTable` LIKE 'agree'");
+    if ($checkAgree && $checkAgree->num_rows > 0) {
+        $vevCol = 'agree';
+    }
+}
+
+if ($isLegacy) {
+    $stmt = $conn->prepare("SELECT p.id, p.titel, p.nam1, p.categ, p.nam2, p.nam3, p.sch as sch1, p.sch_name as s1name, p.$vevCol as vev_status FROM `$prTable` p WHERE p.id = ?");
+} else {
+    $stmt = $conn->prepare("SELECT p.id, p.titel, p.nam1, p.categ, p.nam2, p.nam3, p.sch1, s1.name as s1name, p.$vevCol as vev_status FROM `$prTable` p JOIN $schTable s1 ON p.sch1 = s1.id WHERE p.id = ?");
+}
+
 $stmt->bind_param('i', $progId);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -73,6 +93,12 @@ $rec = $result->fetch_assoc();
 if (!$rec) {
     die('Record not found.');
 }
+
+// Hardening check: do not allow certificate download if vev_status is not 'Ναι'
+if ($rec['vev_status'] !== 'Ναι') {
+    die('<h2>Σφάλμα. Το πρόγραμμα δεν έχει ολοκληρωθεί επιτυχώς (Δεν έχει εκδοθεί βεβαίωση).</h2>');
+}
+
 $rec['sxetos'] = $prSxetos; // Add year to template data
 $stmt->close();
 
