@@ -57,7 +57,23 @@ $isAuthenticated = false;
 if (!$prDebug) {
 	// Initialize phpCAS early
 	require_once('vendor/autoload.php');
-	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
+	
+	// Determine the service base URL dynamically or use the configured one from conf.php
+	if (isset($prCasServiceUrl) && !empty($prCasServiceUrl)) {
+		$service_base_url = $prCasServiceUrl;
+	} else {
+		$protocol = 'http';
+		if (
+			(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+			(isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+			(isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+		) {
+			$protocol = 'https';
+		}
+		$service_base_url = $protocol . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+	}
+	
+	phpCAS::client(CAS_VERSION_3_0, 'sso.sch.gr', 443, '', $service_base_url);
 	
 	// Handle logout
 	if (isset($_POST['logout'])) {
@@ -69,7 +85,7 @@ if (!$prDebug) {
 	}
 	
 	phpCAS::setNoCasServerValidation();
-	phpCAS::handleLogoutRequests(array('sso-test.sch.gr'));
+	phpCAS::handleLogoutRequests(true, array('sso.sch.gr', 'sso-test.sch.gr'));
 
     // Check authentication. This transparently handles tickets and valid CAS redirects!
     $isAuthenticated = phpCAS::isAuthenticated();

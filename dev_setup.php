@@ -34,7 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $content .= "// Admin Usernames (CAS uid)\n";
     $content .= "\$prAdmin1 = '" . addslashes($prAdmin1 ?? '') . "';\n";
-    $content .= "\$prAdmin2 = '" . addslashes($prAdmin2 ?? '') . "';\n";
+    $content .= "\$prAdmin2 = '" . addslashes($prAdmin2 ?? '') . "';\n\n";
+    $content .= "// CAS Service Base URL\n";
+    $content .= "\$prCasServiceUrl = '" . addslashes($prCasServiceUrl ?? '') . "';\n";
     $content .= "// DB credentials\n";
     $content .= "\$prDbhost = '" . addslashes($prDbhost ?? '') . "';\n";
     $content .= "\$prDbname = '" . addslashes($prDbname ?? '') . "';\n";

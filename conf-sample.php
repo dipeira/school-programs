@@ -12,6 +12,9 @@ $prem2 = '';
 $prAdmin1 = '';
 $prAdmin2 = '';
 
+// CAS Service Base URL (e.g. 'https://srv1-dipe.ira.sch.gr' or leave empty for auto-detection)
+$prCasServiceUrl = '';
+
 // DB credentials
 $prDbhost = 'localhost';
 $prDbname = 'school-programs';
