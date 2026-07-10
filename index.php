@@ -269,6 +269,23 @@ else {
   $_SESSION['uid'] = $uid;
 }
 
+// Resolve school ID from the database and set $_SESSION['sid'] for school users
+if (!$_SESSION['admin'] && isset($conn) && !$conn->connect_error) {
+    $clauses = [];
+    if (!empty($_SESSION['email1'])) $clauses[] = "email1='" . mysqli_real_escape_string($conn, $_SESSION['email1']) . "'";
+    if (!empty($_SESSION['email2'])) $clauses[] = "email2='" . mysqli_real_escape_string($conn, $_SESSION['email2']) . "'";
+    if (!empty($sch_code)) $clauses[] = "code='" . mysqli_real_escape_string($conn, $sch_code) . "'";
+    
+    $where = !empty($clauses) ? implode(" OR ", $clauses) : "1=0";
+    $sch_qry = $conn->query("SELECT id, name FROM `$schTable` WHERE $where LIMIT 1");
+    if ($sch_qry && $sch_qry->num_rows > 0) {
+        $sch_row = $sch_qry->fetch_assoc();
+        $_SESSION['sid'] = $sch_row['id'];
+        $sch_name = $sch_row['name'];
+    }
+}
+
+
 
     // Detect legacy table schema
     $isLegacy = false;
@@ -297,7 +314,7 @@ else {
 		    $sql = "SELECT *,p.id as pid FROM `$prTable` p JOIN $schTable s ON s.id = p.sch1 ORDER BY p.id DESC";
         }
 	}
-    $schid = 0; // Initialize schid
+    $schid = $_SESSION['admin'] ? 1 : ($_SESSION['sid'] ?? 0); // Initialize schid
 	$result = $conn->query($sql);
     
     // Ensure admin name is set early to prevent empty-name lookup
