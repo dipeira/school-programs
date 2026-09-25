@@ -61,7 +61,10 @@ CREATE TABLE `progs` (
   `prsnt` enum('Όχι','Ίσως','Ναι') NOT NULL,
   `notes` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci,
   `chk` enum('Όχι','Ναι') NOT NULL,
-  `vev` enum('Όχι','Ναι') NOT NULL
+  `vev` enum('Όχι','Ναι') NOT NULL,
+  `publish` enum('Όχι','Ναι') CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'Όχι',
+  `publish_text` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+  `publish_images` text CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 --

@@ -35,10 +35,45 @@ foreach ($configData as $configItem) {
     ${$configItem['name']} = $configItem['value'];
 }
 
+// Check for records to enable dynamic titles and get available years
+$conn_years = db_connect();
+$availableYears = [];
+$tableQuery = $conn_years->query("SHOW TABLES LIKE 'progs\\_%'");
+if ($tableQuery) {
+    while ($t = $tableQuery->fetch_array()) {
+        $year = str_replace('progs_', '', $t[0]);
+        if (preg_match('/^\d{4}-\d{2}$/', $year)) {
+            $availableYears[] = $year;
+        }
+    }
+}
+if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
+    $prTable = 'progs_' . $_GET['year'];
+    $prSxetos = $_GET['year']; // Override title
+}
+$conn_years->close();
+
+$isAuthenticated = false;
 if (!$prDebug) {
 	// Initialize phpCAS early
 	require_once('vendor/autoload.php');
-	phpCAS::client(CAS_VERSION_3_0,'sso.sch.gr',443,'','https://srv1-dipe.ira.sch.gr');
+	
+	// Determine the service base URL dynamically or use the configured one from conf.php
+	if (isset($prCasServiceUrl) && !empty($prCasServiceUrl)) {
+		$service_base_url = $prCasServiceUrl;
+	} else {
+		$protocol = 'http';
+		if (
+			(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+			(isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+			(isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+		) {
+			$protocol = 'https';
+		}
+		$service_base_url = $protocol . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+	}
+	
+	phpCAS::client(CAS_VERSION_3_0, 'sso.sch.gr', 443, '', $service_base_url);
 	
 	// Handle logout
 	if (isset($_POST['logout'])) {
@@ -50,14 +85,35 @@ if (!$prDebug) {
 	}
 	
 	phpCAS::setNoCasServerValidation();
-	phpCAS::handleLogoutRequests(array('sso-test.sch.gr'));
+	phpCAS::handleLogoutRequests(true, array('sso.sch.gr', 'sso-test.sch.gr'));
 
     // Check authentication. This transparently handles tickets and valid CAS redirects!
     $isAuthenticated = phpCAS::isAuthenticated();
 
-	// if user not logged-in and hasn't pressed the login button, display login form
-	if (!$isAuthenticated && !isset($_POST['login-btn'])):
-		?>
+	// force CAS authentication if button was pressed but not authenticated
+	if (!$isAuthenticated && isset($_POST['login-btn'])) {
+	    phpCAS::forceAuthentication();
+    }
+} else {
+    // Debug mode login/logout handling
+    if (isset($_POST['logout'])) {
+        $_SESSION['loggedin'] = 0;
+        session_unset();
+        session_destroy();
+        header("Location: index.php");
+        exit;
+    }
+    if (isset($_POST['login-btn'])) {
+        $_SESSION['loggedin'] = 1;
+        header("Location: index.php");
+        exit;
+    }
+    $isAuthenticated = (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == 1);
+}
+
+// if user not logged-in, display login form and public catalog
+if (!$isAuthenticated):
+	?>
 	<!DOCTYPE html>
 		<html lang="el">
 			<head>
@@ -69,6 +125,7 @@ if (!$prDebug) {
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
                 <!-- Google Fonts -->
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                <link rel="stylesheet" href="style.css?v=<?= time() ?>_public">
 				<style>
                     body {
                         font-family: 'Inter', sans-serif;
@@ -77,57 +134,44 @@ if (!$prDebug) {
                         display: flex;
                         flex-direction: column;
                     }
-                    .login-container {
-                        flex: 1;
+                    .login-header-bar {
+                        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                        color: #ffffff;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+                    }
+                    .header-icon-box {
+                        background: rgba(255, 255, 255, 0.12);
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 10px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
+                        backdrop-filter: blur(5px);
                     }
-                    .login-card {
-                        background: #ffffff;
-                        border-radius: 16px;
-                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-                        padding: 3.5rem 2.5rem;
-                        max-width: 480px;
-                        width: 100%;
-                        text-align: center;
-                        border: 1px solid rgba(0,0,0,0.05);
-                    }
-                    .login-icon {
-                        font-size: 3.5rem;
-                        color: #0d6efd;
-                        margin-bottom: 1rem;
-                    }
-                    .title {
+                    .header-title {
                         font-weight: 700;
-                        color: #2b3440;
-                        font-size: 1.6rem;
-                        line-height: 1.3;
-                        margin-bottom: 0.5rem;
+                        font-size: 1.25rem;
+                        letter-spacing: -0.3px;
+                        color: #ffffff;
                     }
-                    .subtitle {
-                        color: #6c757d;
-                        font-size: 0.95rem;
-                        margin-bottom: 2rem;
+                    .header-subtitle {
+                        font-size: 0.82rem;
                     }
-                    .btn-login {
-                        padding: 0.8rem 1.5rem;
-                        font-weight: 600;
+                    .btn-login-nav {
                         border-radius: 8px;
-                        font-size: 1.05rem;
-                        transition: all 0.3s ease;
-                        background-color: #0d6efd;
+                        padding: 0.6rem 1.2rem;
+                        font-weight: 600;
+                        transition: all 0.25s ease;
+                        border: 1px solid rgba(255,255,255,0.2);
+                        background-color: #ffffff;
+                        color: #1e3c72 !important;
                     }
-                    .btn-login:hover {
-                        transform: translateY(-2px);
-                        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
-                        background-color: #0b5ed7;
-                    }
-                    .info-text {
-                        font-size: 0.85rem;
-                        color: #8fa0b5;
-                        margin-top: 1.5rem;
-                        line-height: 1.4;
+                    .btn-login-nav:hover {
+                        transform: translateY(-1px);
+                        box-shadow: 0 6px 15px rgba(255, 255, 255, 0.2);
+                        background-color: #f8f9fa;
                     }
                     .footer {
                         padding: 1.5rem 0;
@@ -151,27 +195,168 @@ if (!$prDebug) {
 			</head>
 			
 			<body>
-				<div class="login-container px-3">
-					<div class="login-card">
-                        <i class="bi bi-journal-bookmark-fill login-icon"></i>
-						<h1 class="title">Προγράμματα<br>Σχολικών Δραστηριοτήτων</h1>
-                        <span class="badge bg-primary mb-3 py-2 px-3 fw-medium">Έτος <?=$prSxetos?></span>
-						<p class="subtitle">
-							Σύστημα ελέγχου, διαχείρισης και αυτόματης έκδοσης βεβαιώσεων
-						</p>
+                <!-- Sleek Premium Top Login/Header Bar -->
+                <header class="login-header-bar py-3 px-4 shadow-sm">
+                    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <!-- Left Side: Title & Description -->
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="header-icon-box">
+                                <i class="bi bi-journal-bookmark-fill text-white fs-4"></i>
+                            </div>
+                            <div>
+                                <h1 class="header-title mb-0">Προγράμματα Σχολικών Δραστηριοτήτων</h1>
+                                <p class="header-subtitle mb-0 text-white-50 d-none d-md-block">
+                                    Σύστημα ελέγχου, διαχείρισης και αυτόματης έκδοσης βεβαιώσεων
+                                </p>
+                            </div>
+                            <span class="badge bg-light text-primary fw-semibold px-2 py-1 ms-2">Έτος <?=$prSxetos?></span>
+                        </div>
+                        
+                        <!-- Right Side: Login Button & Info -->
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="text-end d-none d-lg-block text-white-50 small" style="line-height: 1.3;">
+                                <div><i class="bi bi-info-circle me-1"></i>Είσοδος με κωδικούς μονάδας (ΠΣΔ)</div>
+                                <div class="text-warning fw-semibold">Όχι προσωπικοί κωδικοί ή MySchool</div>
+                            </div>
+                            <form id="login" action="index.php" method="post" class="mb-0">
+                                <button type="submit" class="btn btn-light btn-login-nav" name="login-btn">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Είσοδος μέσω Π.Σ.Δ.
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </header>
 
-						<form id="login" method="post">
-							<button type="submit" class="btn btn-primary w-100 btn-login" name="login-btn">
-								<i class="bi bi-box-arrow-in-right me-2"></i>Είσοδος μέσω Π.Σ.Δ.
-							</button>
-						</form>
+                <!-- Public Catalog Section -->
+                <div class="container my-5">
+                    <div class="card shadow-sm border-0 p-4 bg-white rounded-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 border-bottom pb-3">
+                            <h2 class="h3 mb-0 text-primary fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Κατάλογος Προγραμμάτων</h2>
+                            
+                            <!-- Search and Year Selection -->
+                            <div class="d-flex flex-wrap align-items-center gap-3 mt-2 mt-sm-0">
+                                <!-- Search Box -->
+                                <div class="input-group input-group-sm w-auto">
+                                    <span class="input-group-text bg-light border-secondary-subtle"><i class="bi bi-search text-muted"></i></span>
+                                    <input type="text" id="catalogSearchInput" class="form-control form-control-sm" placeholder="Αναζήτηση σχολείου ή τίτλου..." aria-label="Αναζήτηση">
+                                    <button class="btn btn-outline-secondary border-secondary-subtle d-none" type="button" id="btn_clear_search"><i class="bi bi-x"></i></button>
+                                </div>
+                                
+                                <!-- Year Selection -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <label for="publicYearSelect" class="fw-semibold text-muted mb-0">Σχολικό Έτος:</label>
+                                    <select id="publicYearSelect" class="form-select form-select-sm w-auto">
+                                        <option value="">Τρέχον Έτος (Ενεργό)</option>
+                                        <?php foreach ($availableYears as $y): ?>
+                                            <option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div class="info-text">
-						    <i class="bi bi-info-circle me-1"></i>Η είσοδος γίνεται με κωδικούς μονάδας (ΠΣΔ).<br>
-                            ΟΧΙ με προσωπικούς κωδικούς ή MySchool.
-						</div>
-					</div>
-				</div>
+                        <!-- Catalog View Modes -->
+                        <div id="catalog_list_view">
+                            <!-- Loading Spinner -->
+                            <div id="catalog_loading" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Φόρτωση...</span>
+                                </div>
+                                <p class="text-muted mt-2">Φορτώνει ο κατάλογος προγραμμάτων...</p>
+                            </div>
+
+                            <!-- Catalog Items Grid -->
+                            <div id="catalog_items" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" style="display: none;">
+                                <!-- Will be populated by JS -->
+                            </div>
+                            
+                            <!-- Catalog Pagination -->
+                            <div id="catalog_pagination" class="d-none justify-content-center mt-5">
+                                <nav aria-label="Catalog navigation">
+                                    <ul id="catalog_pagination_list" class="pagination pagination-md justify-content-center mb-0">
+                                        <!-- Will be populated by JS -->
+                                    </ul>
+                                </nav>
+                            </div>
+                            
+                            <!-- Empty Search Message -->
+                            <div id="catalog_empty_search" class="alert alert-info text-center py-4" style="display: none;">
+                                <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                                Δεν βρέθηκαν προγράμματα που να ταιριάζουν με την αναζήτηση.
+                            </div>
+
+                            <!-- Empty Catalog (No Programs at All) Message -->
+                            <div id="catalog_empty_all" class="text-center py-5" style="display: none;">
+                                <!-- Simple Text Message -->
+                                <div class="empty-state-card p-5 mx-auto mb-5 rounded-4 shadow-sm border border-light-subtle bg-white" style="max-width: 700px;">
+                                    <div class="empty-icon-wrapper mb-4 d-inline-flex align-items-center justify-content-center">
+                                        <i class="bi bi-journal-x text-primary fs-1"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-dark mb-0">Οι σχολικές μονάδες δεν έχουν δημοσιεύσει ακόμα τις δράσεις τους για το τρέχον έτος.</h4>
+                                </div>
+                            </div>
+
+                            <!-- Public Categories Showcase (Always Visible in Catalog List View) -->
+                            <div id="catalog_info_section" class="text-center py-4 border-top border-light-subtle mt-5">
+                                <h4 class="fw-bold text-secondary mb-4 text-center">Κατηγορίες Προγραμμάτων</h4>
+                                <div class="row row-cols-1 row-cols-md-3 g-4 mt-2 text-start justify-content-center" style="max-width: 900px; margin: 0 auto;">
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-danger border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-heart-pulse-fill text-danger fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Αγωγή Υγείας</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Θεματολογίες που αφορούν τη διατροφή, την πρόληψη, την ψυχική υγεία, την ασφάλεια και την κοινωνική ευεξία των μαθητών.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-success border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-tree-fill text-success fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Περιβαλλοντική Εκπαίδευση</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Δράσεις για την προστασία του περιβάλλοντος, την ανακύκλωση, την αειφορία και τη γνωριμία των παιδιών με τη φύση.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-warning border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-palette-fill text-warning fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Πολιτιστικά Θέματα</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Πρωτοβουλίες για τις τέχνες, το θέατρο, τη λογοτεχνία, την τοπική ιστορία, την παράδοση και την πολιτιστική κληρονομιά.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Catalog Detail View (hidden initially) -->
+                        <div id="catalog_detail_view" style="display: none;">
+                            <button type="button" id="btn_catalog_back" class="btn btn-outline-secondary mb-4">
+                                <i class="bi bi-arrow-left me-1"></i>Πίσω στον κατάλογο
+                            </button>
+                            <div class="border rounded-3 p-4 bg-light">
+                                <div class="mb-3">
+                                    <span id="detail_school_badge" class="badge bg-secondary mb-2 fs-6"></span>
+                                    <h3 id="detail_program_title" class="text-dark fw-bold mb-1"></h3>
+                                    <span id="detail_category_badge" class="badge bg-primary"></span>
+                                </div>
+                                <hr>
+                                <div class="my-4">
+                                    <h5 class="fw-bold text-secondary">Παρουσίαση Προγράμματος:</h5>
+                                    <p id="detail_description_text" class="text-dark" style="line-height: 1.6; font-size: 1.05rem; white-space: pre-wrap;"></p>
+                                </div>
+                                <div id="detail_images_section" class="mt-4">
+                                    <h5 class="fw-bold text-secondary mb-3">Φωτογραφίες:</h5>
+                                    <div id="detail_images_grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+                                        <!-- Images populated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
 				<footer class="footer">
 					<div class="container d-flex justify-content-center align-items-center gap-2">
@@ -182,45 +367,52 @@ if (!$prDebug) {
                         </a>
 					</div>
 				</footer>
+                
+                <!-- Lightbox Modal for Public Catalog Images -->
+                <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-xl">
+                        <div class="modal-content bg-transparent border-0">
+                            <div class="modal-header border-0 p-0 position-relative">
+                                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 fs-4" data-bs-dismiss="modal" aria-label="Close" style="z-index: 1055;"></button>
+                            </div>
+                            <div class="modal-body p-0 text-center">
+                                <img id="lightboxImage" src="" class="img-fluid rounded-3 shadow-lg" alt="Full Resolution" style="max-height: 90vh; max-width: 100%; object-fit: contain; border: 3px solid #ffffff; background-color: #000000;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script src="https://code.jquery.com/jquery-3.7.1.js" type="text/javascript"></script>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                <script src="script.js?v=<?= time() ?>_public" type="text/javascript"></script>
 			</body>
 		</html>
 	<?php
 	die();
-	endif;
+endif;
 
-	// force CAS authentication if button was pressed but not authenticated
-	if (!$isAuthenticated) {
-	    phpCAS::forceAuthentication();
-    }
-
-	// at this step, the user has been authenticated by the CAS server
-	$_SESSION['loggedin'] = 1;
-} else {
-    $_SESSION['loggedin'] = 1;
-}
+$_SESSION['loggedin'] = 1;
 
 // Check for records to enable dynamic titles in <head>
-$conn = new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+$conn = db_connect();
 $isArchive = false;
-$availableYears = [];
-if ($conn->connect_error) {
-    // Fail silently or handle error later
-} else {
-    $tableQuery = $conn->query("SHOW TABLES LIKE 'progs\_%'");
-    if ($tableQuery) {
-        while ($t = $tableQuery->fetch_array()) {
-            $year = str_replace('progs_', '', $t[0]);
-            // Only add if it matches YYYY-YY format (e.g. 2024-25)
-            if (preg_match('/^\d{4}-\d{2}$/', $year)) {
-                $availableYears[] = $year;
-            }
+if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
+    $isArchive = true;
+}
+
+$isProtocolSet = false;
+$stmt_meta = $conn->prepare("SELECT protocol, protocol_date FROM progs_metadata WHERE year_name = ?");
+if ($stmt_meta) {
+    $stmt_meta->bind_param('s', $prSxetos);
+    $stmt_meta->execute();
+    $res_meta = $stmt_meta->get_result();
+    if ($row_meta = $res_meta->fetch_assoc()) {
+        if (!empty($row_meta['protocol']) && !empty($row_meta['protocol_date']) && $row_meta['protocol_date'] !== '0000-00-00') {
+            $isProtocolSet = true;
         }
     }
-    if (isset($_GET['year']) && in_array($_GET['year'], $availableYears)) {
-        $prTable = 'progs_' . $_GET['year'];
-        $isArchive = true;
-        $prSxetos = $_GET['year']; // Override title
-    }
+    $stmt_meta->close();
 }
 ?>
 <!DOCTYPE html>
@@ -230,15 +422,17 @@ if ($conn->connect_error) {
     <title><?php echo 'Προγράμματα Σχολικών Δραστηριοτήτων ' . $prSxetos; ?></title>
     <!-- Include Bootstrap CSS and DataTables.net CSS here -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css" />
-		<link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.css" />
-		<link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.1/css/buttons.dataTables.css" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
-		<style>
-			.btn {
-						margin: 2px 0px 2px 0px;
-					}
-		</style>
+    <link rel="stylesheet" href="style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.3/css/dataTables.dataTables.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.1/css/buttons.dataTables.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <style>
+        .btn {
+            margin: 2px 0px 2px 0px;
+        }
+    </style>
 </head>
 <body>
 <?php
@@ -328,6 +522,7 @@ if (!$_SESSION['admin'] && isset($conn) && !$conn->connect_error) {
         $sch_name = $function_data['name'];
         $schid = $function_data['id'];
     }
+    $_SESSION['sid'] = $schid;
 		
 		// only admin can delete for now
 		$canDelete = $_SESSION['admin'] ? 1 : 0;
@@ -392,7 +587,7 @@ if (!$_SESSION['admin'] && isset($conn) && !$conn->connect_error) {
                                 } else { echo '<td>'; }
 								echo '&nbsp;<a href="#" class="btn btn-info view-record" data-record-id="'.$row['pid'].'" data-year="'.$archData.'"><span class="bi-eye"></span>&nbsp;Προβολή</a>';
                                 $vevDisabled = ($row['vev'] === 'Ναι') ? '' : ' disabled';
-								echo (($showVev && !$isArchive) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev'.$vevDisabled.'" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
+								echo (($showVev && $isProtocolSet) || $_SESSION['admin']) ? '&nbsp;<a href="exp.php?id='.$row['pid'].$archSuffix.'" class="btn btn-success btn-vev'.$vevDisabled.'" data-record-id="'.$row['pid'].'"><span class="bi-file-earmark-text"></span>&nbsp;Βεβαίωση</a>' : '';
 								if (!$isArchive) echo $canDelete ? '&nbsp;<a href="#" class="btn btn-danger" onclick="confirmDelete('.$row['pid'].')"><span class="bi bi-trash"></span>&nbsp;Διαγραφή</a>' : '';
 								echo '</td>';
                 echo '</tr>';
@@ -404,13 +599,13 @@ if (!$_SESSION['admin'] && isset($conn) && !$conn->connect_error) {
         }
 				// Logout button
 				echo "<br><br>";
-				echo '<form action="" method="POST">';
+				echo '<form action="index.php" method="POST">';
 				echo '<div class="d-flex flex-wrap gap-2 align-items-center">';
 				if ($_SESSION['admin']){
 					echo '<button type="button" class="btn btn-primary" id="btnConfig" data-bs-toggle="modal" data-bs-target="#configModal"><span class="bi-gear"></span>&nbsp;Παράμετροι</button>';
 
 					echo '<button type="button" class="btn btn-success" id="exportButton" data-year="'.(isset($_GET['year'])?$_GET['year']:'').'"><span class="bi bi-file-earmark-excel"></span>&nbsp;Εξαγωγή σε Excel</button>';
-                    if ($_SESSION['uid'] === 'dipeira' || $_SESSION['uid'] === 'taypeira') {
+                    if ($_SESSION['uid'] === 'dipeira') {
                         echo '<button type="button" class="btn btn-danger" id="btnAdminYear" data-bs-toggle="modal" data-bs-target="#archiveModal"><span class="bi-archive"></span>&nbsp;Διαχείριση Έτους</button>';
                     }
     			//Open Configuration Modal
@@ -539,7 +734,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-						<form id="editForm">
+						<form id="editForm" enctype="multipart/form-data">
             <div class="modal-body">
                 <!-- Edit record details content with tabs -->
                 <ul class="nav nav-tabs" id="editTabs" role="tablist">
@@ -557,6 +752,9 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="status-tab" data-bs-toggle="tab" href="#status" role="tab" aria-controls="status" aria-selected="false">Κατάσταση</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="publish-tab" data-bs-toggle="tab" href="#publish" role="tab" aria-controls="publish" aria-selected="false">Δημοσίευση στον κατάλογο</a>
                     </li>
                 </ul>
                 <div class="tab-content" id="editTabsContent">
@@ -809,13 +1007,40 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 													</select>
 												</div>
                     </div>
+                    <div class="tab-pane fade" id="publish" role="tabpanel" aria-labelledby="publish-tab">
+                        <div class="form-check mb-3 mt-3">
+                            <input class="form-check-input" type="checkbox" id="publish_check">
+                            <label class="form-check-label fw-bold" for="publish_check">Επιθυμώ δημοσίευση στον κατάλογο</label>
+                            <input type="hidden" id="publish_input" name="publish" value="Όχι">
+                        </div>
+                        <div id="catalog_fields_wrapper" style="display: none;">
+                            <div class="form-group mb-3">
+                                <label for="publish_text" class="fw-bold">Παρουσίαση προγράμματος (έως 800 λέξεις) * <span id="word_count_label" class="text-muted small">(0 / 800 λέξεις)</span></label>
+                                <textarea class="form-control" id="publish_text" name="publish_text" rows="8" placeholder="Γράψτε μια σύντομη περιγραφή του προγράμματος..."></textarea>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="publish_files" class="fw-bold">Φωτογραφίες (έως 8 φωτογραφίες, συνολικά έως 8MB)</label>
+                                <div class="input-group">
+                                    <input class="form-control" type="file" id="publish_files" name="publish_files[]" multiple accept="image/*">
+                                    <button class="btn btn-outline-secondary btn-info text-white" type="button" id="upload_images_btn"><i class="bi bi-upload"></i>&nbsp;Μεταφόρτωση</button>
+                                </div>
+                                <div id="upload_status" class="mt-1 small"></div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="fw-bold">Φωτογραφίες προγράμματος</label>
+                                <div id="publish_images_preview" class="d-flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+                            <input type="hidden" id="publish_images" name="publish_images" value="[]">
+                            <input type="hidden" id="deleted_images" name="deleted_images" value="[]">
+                        </div>
+                    </div>
                 </div>
             </div> <!-- of modal body -->
 						<div class="modal-footer">
 								<button type="button" class="btn btn-secondary btn-danger close-btn" data-bs-dismiss="modal"><i class="bi-x-circle"></i>&nbsp;Κλείσιμο</button>
 								<button type="submit" class="btn btn-primary btn-success save-btn"><i class="bi-save"></i>&nbsp;Αποθήκευση</button>
 						</div>
-						</div> <!-- of form --> 
+						</form>
         </div> <!-- of modal content -->
     </div> <!-- of modal dialog -->
 </div> <!-- of modal -->
@@ -886,7 +1111,6 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 <script src="https://code.jquery.com/jquery-3.7.1.js" type="text/javascript"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous" type="text/javascript"></script>
 <script src="https://cdn.datatables.net/2.0.3/js/dataTables.js" type="text/javascript"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/3.0.1/js/dataTables.buttons.js"></script>
@@ -899,10 +1123,10 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 <!-- Add SweetAlert2 from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- Bootstrap Font Icon CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
-
+<input type="hidden" id="isProtocolSet" value="<?php echo $isProtocolSet ? '1' : '0'; ?>">
+<input type="hidden" id="selectedYear" value="<?php echo htmlspecialchars($prSxetos); ?>">
 <input type="hidden" id="isAdmin" value="<?php echo $_SESSION['admin'] ? '1' : '0'; ?>">
+<input type="hidden" id="showVev" value="<?php echo $showVev ? '1' : '0'; ?>">
 <script src="script.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
 </body>

@@ -1,5 +1,23 @@
 $(document).ready(function() {
     const formatDate = inputDate => inputDate.split('-').reverse().join('/');
+    var deletedImagesTrack = [];
+    var currentImages = [];
+
+    function renderPublishImages(isReadOnly) {
+        var $preview = $('#publish_images_preview');
+        $preview.empty();
+        if (Array.isArray(currentImages)) {
+            $.each(currentImages, function(index, imgPath) {
+                var $wrapper = $('<div class="img-preview-wrapper" data-path="' + imgPath + '"></div>');
+                $wrapper.append('<img src="' + imgPath + '" alt="Preview">');
+                if (!isReadOnly) {
+                    var $removeBtn = $('<button type="button" class="remove-img-btn"><i class="bi bi-trash"></i></button>');
+                    $wrapper.append($removeBtn);
+                }
+                $preview.append($wrapper);
+            });
+        }
+    }
 
     function confirmDelete(recordId) {
         // Show SweetAlert confirmation dialog
@@ -60,74 +78,115 @@ $(document).ready(function() {
     }
 
 
-    // Initialize DataTable
-    $('#progs').DataTable({
-        language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/el.json',
-        },
-        columnDefs: [
-            {
-                targets: [1, 2],
-                className: 'noVis'
+    // Initialize DataTable safely
+    if ($.fn.DataTable && $('#progs').length) {
+        $('#progs').DataTable({
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/el.json',
             },
-            {
-                targets: 7,
-                type: 'num' // Force strict mathematical sorting so data-order integer isn't parsed as text
-            }
-        ],
-        order: [[7, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
-        layout: {
-            topStart: {
-                buttons: [
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)',
-                        popoverTitle: 'Επιλογή ορατών στηλών'
-                    },
-                    'excelHtml5',
-                    {
-                        extend: 'pdfHtml5',
-                        orientation: 'landscape',
-                        pageSize: 'A4',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
+            columnDefs: [
+                {
+                    targets: [1, 2],
+                    className: 'noVis'
+                },
+                {
+                    targets: 7,
+                    type: 'num' // Force strict mathematical sorting so data-order integer isn't parsed as text
+                }
+            ],
+            order: [[7, 'desc']], // Dramatically improves UX: Native load auto-sorts to the newest programs instantly
+            layout: {
+                topStart: {
+                    buttons: [
+                        {
+                            extend: 'colvis',
+                            columns: ':not(.noVis)',
+                            popoverTitle: 'Επιλογή ορατών στηλών'
+                        },
+                        'excelHtml5',
+                        {
+                            extend: 'pdfHtml5',
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':not(:last-child)'
+                            }
+                        },
+                        {
+                            text: '<i class="bi bi-file-earmark-zip me-1"></i>Βεβαιώσεις',
+                            action: function ( e, dt, node, config ) {
+                                var year = $('#selectedYear').val() || '';
+                                window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                            },
+                            className: 'btn-success text-white',
+                            init: function(dt, node, config) {
+                                var isProtocolSet = $('#isProtocolSet').val() === '1';
+                                var isAdmin = $('#isAdmin').val() === '1';
+                                var showVev = $('#showVev').val() === '1';
+
+                                // Enable button only if protocol is configured
+                                if (!isProtocolSet) {
+                                    this.disable();
+                                } else {
+                                    this.enable();
+                                }
+
+                                // Hide button completely if not admin and certificates are disabled globally
+                                if (!isAdmin && !showVev) {
+                                    this.node().addClass('d-none');
+                                }
+                            }
+                        },
+                        {
+                            text: '<i class="bi bi-info-circle me-1"></i>Βοήθεια για τη Δημοσίευση στον Κατάλογο',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = 'help_catalog.php';
+                            },
+                            className: 'btn-info text-white'
                         }
-                    }
-                ]
+                    ]
+                }
             }
+        });
+    }
+
+    if ($.fn.datepicker && $('.datepicker').length) {
+        $('.datepicker').datepicker({
+            format: 'dd/mm/yyyy',
+        });
+    }
+
+
+    // Initialize Select2 elements safely
+    if ($.fn.select2) {
+        if ($('#sch1').length) {
+            $('#sch1').select2({
+                ajax: {
+                    url: 'db.php?all_schools=true', // The URL to retrieve the options
+                    dataType: 'json',
+                    delay: 500,
+                    processResults: function(data) { return { results: data }; },
+                    cache: true
+                },
+                minimumInputLength: 0, // You can adjust this according to your needs
+                dropdownParent: $('#editForm')
+            });
         }
-    });
 
-    $('.datepicker').datepicker({
-        format: 'dd/mm/yyyy',
-    });
-
-
-    // Initialize sch1 select2 with options
-    $('#sch1').select2({
-        ajax: {
-            url: 'db.php?all_schools=true', // The URL to retrieve the options
-            dataType: 'json',
-            delay: 500,
-            processResults: function(data) { return { results: data }; },
-            cache: true
-        },
-        minimumInputLength: 0, // You can adjust this according to your needs
-        dropdownParent: $('#editForm')
-    });
-
-    // Initialize sch2 select2 with options
-    $('#sch2').select2({
-        ajax: {
-            url: 'db.php?all_schools=true', // The URL to retrieve the options
-            dataType: 'json',
-            delay: 500,
-            processResults: function(data) { return { results: data }; },
-            cache: true
-        },
-        minimumInputLength: 0, // You can adjust this according to your needs
-        dropdownParent: $('#editForm')
-    });
+        if ($('#sch2').length) {
+            $('#sch2').select2({
+                ajax: {
+                    url: 'db.php?all_schools=true', // The URL to retrieve the options
+                    dataType: 'json',
+                    delay: 500,
+                    processResults: function(data) { return { results: data }; },
+                    cache: true
+                },
+                minimumInputLength: 0, // You can adjust this according to your needs
+                dropdownParent: $('#editForm')
+            });
+        }
+    }
 
 
     // Function to display Bootstrap alert
@@ -154,10 +213,14 @@ $(document).ready(function() {
             // Append the hidden input after the custom text element
             $hiddenInput.insertAfter($customTextElement);
             // Remove the Select2 element completely
-            $sch1.select2('destroy').remove();
+            if ($sch1.data('select2')) {
+                $sch1.select2('destroy');
+            }
+            $sch1.remove();
             $('#editForm')[0].reset();
         });   
     }
+
     $('.add-record').on('click', function() {
         // Use AJAX to get record details and populate the view modal
         // Show the view modal
@@ -166,6 +229,22 @@ $(document).ready(function() {
         $('#editTabs a[href="#school"]').tab('show');
         // enable all inputs (in case they're disabled)
         $("#editForm :input").prop("disabled", false);
+        $('#upload_images_btn').prop("disabled", false).show();
+        
+        // Reset catalog specific fields
+        deletedImagesTrack = [];
+        currentImages = [];
+        $('#deleted_images').val('[]');
+        $('#publish_images').val('[]');
+        $('#publish_images_preview').empty();
+        $('#publish_files').val('');
+        $('#upload_status').text('');
+        $('#publish_check').prop('checked', false);
+        $('#publish_input').val('Όχι');
+        $('#catalog_fields_wrapper').hide();
+        $('#publish_text').val('');
+        updateWordCount();
+
         // get sch id (if not admin)
         var schId = $(this).data('schid');
         if (!!schId && schId != 1) {
@@ -188,10 +267,17 @@ $(document).ready(function() {
         var isAdmin = $(this).data('admin');
         var archiveYear = $(this).data('year'); // Dynamic routing
 
+        // Reset catalog inputs on load
+        deletedImagesTrack = [];
+        currentImages = [];
+        $('#deleted_images').val('[]');
+        $('#publish_images').val('[]');
+        $('#publish_images_preview').empty();
+        $('#publish_files').val('');
+        $('#upload_status').text('');
+
         // Use AJAX to get record details and populate the edit modal
         $.get('db.php', { id: recordId, year: archiveYear }, function(data) { 
-            // console.log(data);
-            
             $.each(data, function(key, value) {
                 var fieldId = key;
                 var $field = $('#' + fieldId);
@@ -199,21 +285,25 @@ $(document).ready(function() {
                 // Set the value of the form field
                 if (key === 'praxidate') {
                     $field.val(formatDate(value));
-                } else {
-                    $field.val(value);
+                                } else if ($field.length) {
+                    if (key === 'vev' || key === 'chk') {
+                        var cleanVal = (value !== null && value !== undefined) ? String(value).trim() : '';
+                        $field.val(cleanVal);
+                    } else {
+                        $field.val(value);
+                    }
                 }
                 
                 if (fieldId === 'sch1') {
-                    // Check if the option exists in the Select2 dropdown
-                    var $select2 = $field.data('select2');
-                    var $option = $select2.$element.find('option[value="' + value + '"]');
-                    
-                    if ($option.length === 0) {
-                        // If the option doesn't exist, add it
-                        $field.append(new Option(data.sch1name, value, true, true)).trigger('change');
-                    } else {
-                        // If the option exists, trigger 'change' without clearing existing options
-                        $field.val(value).trigger('change');
+                    if ($.fn.select2 && $field.data('select2')) {
+                        var $select2 = $field.data('select2');
+                        var $option = $select2.$element.find('option[value="' + value + '"]');
+                        
+                        if ($option.length === 0) {
+                            $field.append(new Option(data.sch1name, value, true, true)).trigger('change');
+                        } else {
+                            $field.val(value).trigger('change');
+                        }
                     }
                     // if school, disable sch1
                     if (schId > 0) {
@@ -221,17 +311,47 @@ $(document).ready(function() {
                     }
                 }
             });
+
+            // Map publication checkbox state (Greek 'Ναι' in unicode is \u039d\u03b1\u03b9)
+            var isPublished = (data.publish === 'Ναι' || data.publish === '\u039d\u03b1\u03b9');
+            $('#publish_check').prop('checked', isPublished);
+            $('#publish_input').val(isPublished ? 'Ναι' : 'Όχι');
+            if (isPublished) {
+                $('#catalog_fields_wrapper').show();
+            } else {
+                $('#catalog_fields_wrapper').hide();
+            }
+
+            // Word counter update
+            var descText = data.publish_text || '';
+            $('#publish_text').val(descText);
+            updateWordCount();
+
+            // Render existing images
+            currentImages = [];
+            try {
+                if (data.publish_images) {
+                    currentImages = JSON.parse(data.publish_images);
+                }
+            } catch (e) {
+                console.error("Error parsing publish_images JSON", e);
+            }
+            $('#publish_images').val(JSON.stringify(currentImages));
+            renderPublishImages(triggeredClass === 'view-record');
         });
+
         // if view, disable all inputs
         if (triggeredClass === 'view-record') {
             $("#editForm :input").prop("disabled", true);
+            $('#upload_images_btn').prop("disabled", true).hide();
             $('.modal-title').text('Προβολή προγράμματος');
             $('.save-btn').hide();
             $('.close-btn').prop("disabled", false);
         } else {
             $("#editForm :input").prop("disabled", false);
-            // disable #vev if canVev is not set
-            if (!$(this).data('canvev')){
+            $('#upload_images_btn').prop("disabled", false).show();
+            // disable #vev if canVev is not set and user is not admin
+            if (!$(this).data('canvev') && !isAdmin){
                 $("#vev").prop("disabled", true);
             }
             $('.modal-title').text('Επεξεργασία προγράμματος');
@@ -239,10 +359,7 @@ $(document).ready(function() {
             $('.close-btn').prop("disabled", false);
             if (lockBasic && !isAdmin) {
                 // disable basic fields
-                // Array of input IDs to disable
                 var inputsToDisable = ['sch1', 'sch2', 'titel', 'nam1', 'nam2', 'nam3', 'eid1', 'eid2', 'eid3'];
-
-                // Loop through the array and disable each input
                 $.each(inputsToDisable, function(index, id) {
                     $('#' + id).prop('disabled', true);
                 });
@@ -255,21 +372,240 @@ $(document).ready(function() {
         $('#editTabs a[href="#school"]').tab('show');
     });
 
+    // Handle Publish Settings checkbox toggle
+    $(document).on('change', '#publish_check', function() {
+        var checked = $(this).is(':checked');
+        $('#publish_input').val(checked ? 'Ναι' : 'Όχι');
+        if (checked) {
+            $('#catalog_fields_wrapper').slideDown();
+        } else {
+            $('#catalog_fields_wrapper').slideUp();
+        }
+    });
+
+    // Handle Live Word Count
+    function updateWordCount() {
+        var text = $('#publish_text').val() || '';
+        var words = text.trim().split(/\s+/).filter(Boolean);
+        var count = words.length;
+        var $label = $('#word_count_label');
+        $label.text('(' + count + ' / 800 λέξεις)');
+        if (count > 800) {
+            $label.removeClass('text-muted').addClass('text-danger fw-bold');
+        } else {
+            $label.removeClass('text-danger fw-bold').addClass('text-muted');
+        }
+    }
+    $(document).on('input propertychange', '#publish_text', updateWordCount);
+
+    // Validate selected files (individual size < 8MB, and total files count constraint on select)
+    $(document).on('change', '#publish_files', function() {
+        var files = this.files;
+        if (!files || files.length === 0) return;
+        
+        var limitExceeded = false;
+        var totalSize = 0;
+        for (var i = 0; i < files.length; i++) {
+            totalSize += files[i].size;
+            if (files[i].size > 8388608) { // 8MB
+                limitExceeded = true;
+            }
+        }
+        
+        if (limitExceeded) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Κάποιο αρχείο υπερβαίνει το όριο των 8MB! Παρακαλούμε επιλέξτε μικρότερα αρχεία.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            $(this).val('');
+            return;
+        }
+
+        if (totalSize > 8388608) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Το συνολικό μέγεθος των επιλεγμένων αρχείων υπερβαίνει το όριο των 8MB!',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            $(this).val('');
+            return;
+        }
+
+        if (currentImages.length + files.length > 8) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Μπορείτε να ανεβάσετε έως 8 φωτογραφίες συνολικά. Ήδη υπάρχουν ' + currentImages.length + ' φωτογραφίες.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            $(this).val('');
+            return;
+        }
+    });
+
+    // Handle AJAX image uploading when clicking "Μεταφόρτωση"
+    $(document).on('click', '#upload_images_btn', function() {
+        var filesInput = document.getElementById('publish_files');
+        if (!filesInput || !filesInput.files || filesInput.files.length === 0) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Παρακαλούμε επιλέξτε τουλάχιστον μία φωτογραφία.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        var files = filesInput.files;
+
+        // Verify count and size limits before proceeding
+        var totalCount = currentImages.length + files.length;
+        if (totalCount > 8) {
+            Swal.fire({
+                title: 'Σφάλμα!',
+                text: 'Μπορείτε να ανεβάσετε έως 8 φωτογραφίες συνολικά. Ήδη υπάρχουν ' + currentImages.length + ' φωτογραφίες.',
+                icon: 'error',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        var totalSize = 0;
+        for (var i = 0; i < files.length; i++) {
+            totalSize += files[i].size;
+        }
+        if (totalSize > 8388608) {
+            Swal.fire({
+                title: 'Σφάλμα!',
+                text: 'Το συνολικό μέγεθος των επιλεγμένων αρχείων υπερβαίνει το όριο των 8MB!',
+                icon: 'error',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        // Disable button & show loading state
+        var $btn = $(this);
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp;Μεταφόρτωση...');
+        $('#upload_status').removeClass('text-danger text-success').addClass('text-muted').text('Γίνεται μεταφόρτωση των αρχείων, παρακαλώ περιμένετε...');
+
+        var uploadData = new FormData();
+        uploadData.append('action', 'upload_temp_images');
+        uploadData.append('existing_count', currentImages.length);
+        for (var i = 0; i < files.length; i++) {
+            uploadData.append('publish_files[]', files[i]);
+        }
+
+        $.ajax({
+            url: 'db.php',
+            type: 'POST',
+            data: uploadData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response) {
+                $btn.prop('disabled', false).html('<i class="bi bi-upload"></i>&nbsp;Μεταφόρτωση');
+                if (response.success) {
+                    // Append new image paths
+                    $.each(response.paths, function(index, path) {
+                        currentImages.push(path);
+                    });
+                    $('#publish_images').val(JSON.stringify(currentImages));
+                    renderPublishImages(false);
+                    
+                    // Reset file input
+                    $('#publish_files').val('');
+                    
+                    // Show success status
+                    $('#upload_status').removeClass('text-muted text-danger').addClass('text-success').text('Η μεταφόρτωση ολοκληρώθηκε με επιτυχία!');
+                    setTimeout(function() {
+                        $('#upload_status').text('');
+                    }, 4000);
+                } else {
+                    $('#upload_status').removeClass('text-muted text-success').addClass('text-danger').text('Σφάλμα: ' + response.error);
+                    Swal.fire({
+                        title: 'Σφάλμα!',
+                        text: response.error,
+                        icon: 'error',
+                        confirmButtonText: 'Εντάξει'
+                    });
+                }
+            },
+            error: function(err) {
+                $btn.prop('disabled', false).html('<i class="bi bi-upload"></i>&nbsp;Μεταφόρτωση');
+                $('#upload_status').removeClass('text-muted text-success').addClass('text-danger').text('Σφάλμα σύνδεσης κατά τη μεταφόρτωση.');
+                Swal.fire({
+                    title: 'Σφάλμα!',
+                    text: 'Παρουσιάστηκε σφάλμα κατά τη μεταφόρτωση των αρχείων.',
+                    icon: 'error',
+                    confirmButtonText: 'Εντάξει'
+                });
+            }
+        });
+    });
+
+    // Handle existing image removal
+    $(document).on('click', '.remove-img-btn', function() {
+        var $wrapper = $(this).closest('.img-preview-wrapper');
+        var path = $wrapper.data('path');
+        
+        // Remove from currentImages
+        var index = currentImages.indexOf(path);
+        if (index > -1) {
+            currentImages.splice(index, 1);
+        }
+        $('#publish_images').val(JSON.stringify(currentImages));
+        
+        deletedImagesTrack.push(path);
+        $('#deleted_images').val(JSON.stringify(deletedImagesTrack));
+        $wrapper.remove();
+    });
+
     // editForm submit handler
     $('#editForm').submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
 
-        // Serialize the form data to send to db.php
-        var formData = $(this).serialize();
+        // Enforce two-step upload: check if there are selected files that haven't been uploaded
+        var filesInput = document.getElementById('publish_files');
+        if (filesInput && filesInput.files && filesInput.files.length > 0) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Έχετε επιλέξει φωτογραφίες χωρίς να τις μεταφορτώσετε. Παρακαλούμε πατήστε "Μεταφόρτωση" ή καθαρίστε την επιλογή αρχείων πριν την Αποθήκευση.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            });
+            return;
+        }
+
+        // Enforce word count limit on submit if publish enabled
+        if ($('#publish_check').is(':checked')) {
+            var text = $('#publish_text').val() || '';
+            var words = text.trim().split(/\s+/).filter(Boolean);
+            if (words.length > 800) {
+                Swal.fire(
+                    'Σφάλμα!',
+                    'Η παρουσίαση του προγράμματος δεν πρέπει να υπερβαίνει τις 800 λέξεις!',
+                    'error'
+                );
+                return;
+            }
+        }
+
+        // Use FormData to support file uploads
+        var formData = new FormData(this);
 
         // Perform an AJAX POST request to db.php to save the edited data
         $.ajax({
             url: 'db.php',
             type: 'POST',
             data: formData,
+            processData: false,
+            contentType: false,
             dataType: 'json',
             success: function(response) {
-                // Handle the response from db.php (e.g., success message or error handling)
                 if (response.success) {
                     Swal.fire(
                         'Επιτυχία!',
@@ -284,7 +620,6 @@ $(document).ready(function() {
             },
             error: function(err) {
                 console.log(err.responseText);
-                // Handle any errors from the AJAX request
                 showAlert('Σφάλμα αποθήκευσης...', 'error');
             }
         });
@@ -524,7 +859,6 @@ $(document).ready(function() {
 
         var nextPart1 = parseInt(parts[0]) + 1;
         var nextPart2 = parseInt(parts[1]) + 1;
-        // Pad suffix if needed (26 -> 27)
         var suffixStr = nextPart2.toString().padStart(2, '0');
         var nextYear = nextPart1 + '-' + suffixStr;
 
@@ -539,7 +873,6 @@ $(document).ready(function() {
         
         // Update dropdown
         var $selectYear = $('#selectMetadataYear');
-        // Add at the top (after sorts)
         $selectYear.prepend('<option value="' + nextYear + '">' + nextYear + '</option>');
         $selectYear.val(nextYear).trigger('change');
         
@@ -594,6 +927,9 @@ $(document).ready(function() {
                             if (res.success) {
                                 showAlert("Επιτυχής αποθήκευση παραμέτρων!", 'success');
                                 $('#configModal').modal('hide');
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 1000);
                             } else {
                                 showAlert("Σφάλμα αποθήκευσης πρωτοκόλλων.", 'danger');
                             }
@@ -644,7 +980,7 @@ $(document).ready(function() {
         }
     });
 
-    // Print Program Handler - Generates A4 printable version of all modal tabs
+    // Print Program Handler
     $('#printProgramBtn').on('click', function() {
         var printContents = "";
         var schoolName = $('#sch_name').val() || "Σχολείο";
@@ -658,6 +994,9 @@ $(document).ready(function() {
 
         $('#editForm .tab-pane').each(function() {
             var tabId = $(this).attr('id');
+            // Skip publish tab in printable output
+            if (tabId === 'publish') return;
+            
             var tabLabel = $("a[href='#" + tabId + "']").text().trim();
             
             printContents += "<div style='margin-bottom: 20px;'>";
@@ -698,17 +1037,266 @@ $(document).ready(function() {
         }, 300);
     });
 
-    // If URL has 'year' parameter, disable 'Add' button and edit link logic for history
     var urlParams = new URLSearchParams(window.location.search);
     var isAdmin = $('#isAdmin').val() === '1';
     
     if (urlParams.get('year')) {
-        // Hide only specific data-modifying actions in archives
         $('.add-record, .edit-record, #btnAdminYear').addClass('d-none');
+    }
+
+    // ==========================================
+    // Public Catalog Script Logic
+    // ==========================================
+    var currentCatalogData = [];
+    var catalogPageSize = 9;
+    var catalogCurrentPage = 1;
+
+    function stripGreekAccents(str) {
+        if (!str) return '';
+        return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function renderCatalog() {
+        var searchTerm = stripGreekAccents($('#catalogSearchInput').val() || '').trim();
         
-        // Hide certificates ONLY for non-admins in archives
-        if (!isAdmin) {
-            $('.btn-vev').addClass('d-none');
+        // Show/hide clear button
+        if (searchTerm.length > 0) {
+            $('#btn_clear_search').removeClass('d-none');
+        } else {
+            $('#btn_clear_search').addClass('d-none');
         }
+
+        var filteredData = currentCatalogData.filter(function(item) {
+            if (!searchTerm) return true;
+            
+            var schoolName = stripGreekAccents(item.school_name || '');
+            var programTitle = stripGreekAccents(item.titel || '');
+            
+            return schoolName.indexOf(searchTerm) !== -1 || programTitle.indexOf(searchTerm) !== -1;
+        });
+
+        $('#catalog_items').empty();
+        $('#catalog_empty_search').hide();
+        $('#catalog_empty_all').hide();
+        $('#catalog_pagination').removeClass('d-flex').addClass('d-none');
+
+        if (filteredData.length === 0) {
+            if (currentCatalogData.length === 0) {
+                $('#catalog_empty_all').show();
+            } else {
+                $('#catalog_empty_search').show();
+            }
+            return;
+        }
+
+        // Pagination calculation
+        var totalPages = Math.ceil(filteredData.length / catalogPageSize);
+        if (catalogCurrentPage < 1) catalogCurrentPage = 1;
+        if (catalogCurrentPage > totalPages) catalogCurrentPage = totalPages;
+
+        var startIndex = (catalogCurrentPage - 1) * catalogPageSize;
+        var pageData = filteredData.slice(startIndex, startIndex + catalogPageSize);
+
+        $.each(pageData, function(index, item) {
+            var images = [];
+            try {
+                if (item.publish_images) {
+                    images = JSON.parse(item.publish_images);
+                }
+            } catch (e) {}
+
+            var firstImg = (images && images.length > 0) ? images[0] : 'https://placehold.co/600x400/ecefe6/333333?text=Πρόγραμμα+Δραστηριοτήτων';
+
+            var cardHtml = 
+                '<div class="col">' +
+                    '<div class="card catalog-card h-100">' +
+                        '<img src="' + firstImg + '" class="card-img-top" alt="Program Image" style="height: 180px; object-fit: cover;">' +
+                        '<div class="card-body d-flex flex-column">' +
+                            '<div class="school-name">' + htmlEntities(item.school_name) + '</div>' +
+                            '<h5 class="program-title">' + htmlEntities(item.titel) + '</h5>' +
+                            '<div class="mt-auto">' +
+                                '<span class="badge bg-primary mb-2">' + htmlEntities(item.categ) + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="card-footer bg-light">' +
+                            '<button type="button" class="btn btn-primary btn-sm btn-view-program w-100" data-pid="' + item.pid + '"><i class="bi bi-eye me-1"></i>Προβολή</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            $('#catalog_items').append(cardHtml);
+        });
+
+        // Render pagination controls
+        var $paginationList = $('#catalog_pagination_list');
+        $paginationList.empty();
+        
+        if (totalPages > 1) {
+            $('#catalog_pagination').removeClass('d-none').addClass('d-flex');
+            
+            // Previous button
+            var prevClass = (catalogCurrentPage === 1) ? 'disabled' : '';
+            var prevHtml = 
+                '<li class="page-item ' + prevClass + '">' +
+                    '<a class="page-link btn-catalog-page" href="#" data-page="' + (catalogCurrentPage - 1) + '" aria-label="Previous">' +
+                        '<span aria-hidden="true">&laquo;</span>' +
+                    '</a>' +
+                '</li>';
+            $paginationList.append(prevHtml);
+
+            // Page numbers
+            for (var p = 1; p <= totalPages; p++) {
+                var activeClass = (p === catalogCurrentPage) ? 'active' : '';
+                var pageHtml = 
+                    '<li class="page-item ' + activeClass + '">' +
+                        '<a class="page-link btn-catalog-page" href="#" data-page="' + p + '">' + p + '</a>' +
+                    '</li>';
+                $paginationList.append(pageHtml);
+            }
+
+            // Next button
+            var nextClass = (catalogCurrentPage === totalPages) ? 'disabled' : '';
+            var nextHtml = 
+                '<li class="page-item ' + nextClass + '">' +
+                    '<a class="page-link btn-catalog-page" href="#" data-page="' + (catalogCurrentPage + 1) + '" aria-label="Next">' +
+                        '<span aria-hidden="true">&raquo;</span>' +
+                    '</a>' +
+                '</li>';
+            $paginationList.append(nextHtml);
+        }
+
+        // Display Details Click Handler
+        $('.btn-view-program').off('click').on('click', function() {
+            var pid = $(this).data('pid');
+            var matched = null;
+            for (var i = 0; i < currentCatalogData.length; i++) {
+                if (currentCatalogData[i].pid == pid) {
+                    matched = currentCatalogData[i];
+                    break;
+                }
+            }
+
+            if (matched) {
+                $('#detail_school_badge').text(matched.school_name);
+                $('#detail_program_title').text(matched.titel);
+                $('#detail_category_badge').text(matched.categ);
+                $('#detail_description_text').text(matched.publish_text || '');
+
+                var detailImages = [];
+                try {
+                    if (matched.publish_images) {
+                        detailImages = JSON.parse(matched.publish_images);
+                    }
+                } catch (e) {}
+
+                var $gallery = $('#detail_images_grid');
+                $gallery.empty();
+                if (detailImages && detailImages.length > 0) {
+                    $('#detail_images_section').show();
+                    $.each(detailImages, function(idx, src) {
+                        var imgCol = 
+                            '<div class="col">' +
+                                '<img src="' + src + '" class="img-fluid detail-gallery-img" alt="Gallery Image">' +
+                            '</div>';
+                        $gallery.append(imgCol);
+                    });
+                } else {
+                    $('#detail_images_section').hide();
+                }
+
+                // Transition views
+                $('#catalog_list_view').fadeOut(200, function() {
+                    $('#catalog_detail_view').fadeIn(200);
+                    $('html, body').animate({
+                        scrollTop: $('#catalog_detail_view').offset().top - 20
+                    }, 300);
+                });
+            }
+        });
+    }
+
+    if ($('#catalog_items').length) {
+        var defaultYear = $('#publicYearSelect').val() || '';
+        loadPublicCatalog(defaultYear);
+    }
+
+    $(document).on('change', '#publicYearSelect', function() {
+        var selectedYear = $(this).val() || '';
+        $('#catalogSearchInput').val(''); // Clear search box when changing year
+        $('#btn_clear_search').addClass('d-none');
+        catalogCurrentPage = 1; // Reset to page 1
+        loadPublicCatalog(selectedYear);
+    });
+
+    $(document).on('input', '#catalogSearchInput', function() {
+        catalogCurrentPage = 1; // Reset to page 1
+        renderCatalog();
+    });
+
+    $(document).on('click', '#btn_clear_search', function() {
+        $('#catalogSearchInput').val('');
+        catalogCurrentPage = 1; // Reset to page 1
+        renderCatalog();
+    });
+
+    // Lightbox image preview handler
+    $(document).on('click', '.detail-gallery-img', function() {
+        var src = $(this).attr('src');
+        $('#lightboxImage').attr('src', src);
+        $('#lightboxModal').modal('show');
+    });
+
+    $(document).on('click', '.btn-catalog-page', function(e) {
+        e.preventDefault();
+        var targetPage = parseInt($(this).data('page'));
+        if (targetPage && targetPage !== catalogCurrentPage) {
+            catalogCurrentPage = targetPage;
+            renderCatalog();
+            // Scroll smoothly back to top of catalog section
+            $('html, body').animate({
+                scrollTop: $('#catalog_list_view').offset().top - 20
+            }, 200);
+        }
+    });
+
+    function loadPublicCatalog(year) {
+        $('#catalog_loading').show();
+        $('#catalog_items').hide().empty();
+        $('#catalog_empty_search').hide();
+        $('#catalog_empty_all').hide();
+        $('#catalog_pagination').removeClass('d-flex').addClass('d-none');
+        $('#catalog_detail_view').hide();
+        $('#catalog_list_view').show();
+
+        $.ajax({
+            url: 'db.php',
+            type: 'GET',
+            data: { action: 'get_catalog', year: year },
+            dataType: 'json',
+            success: function(data) {
+                $('#catalog_loading').hide();
+                currentCatalogData = data || [];
+                catalogCurrentPage = 1; // Reset to page 1
+                renderCatalog();
+                $('#catalog_items').fadeIn(200);
+            },
+            error: function() {
+                $('#catalog_loading').hide();
+                $('#catalog_empty_search').text('Σφάλμα κατά τη φόρτωση του καταλόγου.').show();
+            }
+        });
+    }
+
+    $(document).on('click', '#btn_catalog_back', function() {
+        $('#catalog_detail_view').fadeOut(200, function() {
+            $('#catalog_list_view').fadeIn(200);
+            $('html, body').animate({
+                scrollTop: $('#catalog_items').offset().top - 100
+            }, 300);
+        });
+    });
+
+    function htmlEntities(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 });
