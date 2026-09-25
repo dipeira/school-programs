@@ -116,7 +116,20 @@ $(document).ready(function() {
                             text: '<i class="bi bi-file-earmark-zip me-1"></i>Βεβαιώσεις',
                             action: function ( e, dt, node, config ) {
                                 var year = $('#selectedYear').val() || '';
-                                window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                                Swal.fire({
+                                    title: 'Προσοχή!',
+                                    text: 'Η διαδικασία αυτή ενδέχεται να διαρκέσει αρκετά λεπτά. Είστε σίγουροι ότι θέλετε να συνεχίσετε;',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonColor: '#198754',
+                                    cancelButtonColor: '#6c757d',
+                                    confirmButtonText: 'Ναι, προχώρησε!',
+                                    cancelButtonText: 'Ακύρωση'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                                    }
+                                });
                             },
                             className: 'btn-success text-white',
                             init: function(dt, node, config) {
