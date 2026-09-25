@@ -114,22 +114,38 @@ $(document).ready(function() {
                         },
                         {
                             text: '<i class="bi bi-file-earmark-zip me-1"></i>Βεβαιώσεις',
+                            attr: {
+                                id: 'btnDownloadAllVev'
+                            },
                             action: function ( e, dt, node, config ) {
+                                if (e && e.preventDefault) e.preventDefault();
                                 var year = $('#selectedYear').val() || '';
-                                Swal.fire({
-                                    title: 'Προσοχή!',
-                                    text: 'Η διαδικασία αυτή ενδέχεται να διαρκέσει αρκετά λεπτά. Είστε σίγουροι ότι θέλετε να συνεχίσετε;',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonColor: '#198754',
-                                    cancelButtonColor: '#6c757d',
-                                    confirmButtonText: 'Ναι, προχώρησε!',
-                                    cancelButtonText: 'Ακύρωση'
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                                var messageText = 'Η διαδικασία αυτή ενδέχεται να διαρκέσει αρκετά λεπτά. Είστε σίγουροι ότι θέλετε να συνεχίσετε;';
+                                
+                                function triggerDownload() {
+                                    window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                                }
+
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        title: 'Προσοχή!',
+                                        text: messageText,
+                                        icon: 'warning',
+                                        showCancelButton: true,
+                                        confirmButtonColor: '#198754',
+                                        cancelButtonColor: '#6c757d',
+                                        confirmButtonText: 'Ναι, προχώρησε!',
+                                        cancelButtonText: 'Ακύρωση'
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            triggerDownload();
+                                        }
+                                    });
+                                } else {
+                                    if (confirm(messageText)) {
+                                        triggerDownload();
                                     }
-                                });
+                                }
                             },
                             className: 'btn-success text-white',
                             init: function(dt, node, config) {
