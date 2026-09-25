@@ -181,7 +181,7 @@ function convertDocxBatchToPdf(array $docxPaths) {
     }
 }
 
-// Generate all DOCX files first and track for cleanup
+// Generate all DOCX files first and track absolute paths for cleanup
 $docxMap = [];
 while ($rec = $result->fetch_assoc()) {
     $rec['sxetos'] = $prSxetos;
@@ -190,8 +190,9 @@ while ($rec = $result->fetch_assoc()) {
     $rec['protocol_date'] = $protocol_date;
     
     $docxFile = createFile($rec);
-    $docxMap[$rec['id']] = $docxFile;
-    $filesToDelete[] = $docxFile;
+    $docxAbs = realpath($docxFile) ?: (__DIR__ . '/' . $docxFile);
+    $docxMap[$rec['id']] = $docxAbs;
+    $filesToDelete[] = $docxAbs;
 }
 
 $conn->close();
@@ -202,7 +203,9 @@ convertDocxBatchToPdf(array_values($docxMap));
 // Create ZIP file
 $zip = new ZipArchive();
 $zipFileName = 'files/vevaioseis_' . $prSxetos . '_' . uniqid() . '.zip';
-if ($zip->open($zipFileName, ZipArchive::CREATE) !== TRUE) {
+$zipAbs = __DIR__ . '/' . $zipFileName;
+
+if ($zip->open($zipAbs, ZipArchive::CREATE) !== TRUE) {
     die("Could not create ZIP file");
 }
 
@@ -212,18 +215,19 @@ foreach ($docxMap as $progId => $docxPath) {
     $pdfPath = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '.pdf';
 
     if (file_exists($pdfPath)) {
-        $filesToDelete[] = $pdfPath;
-        $zip->addFile($pdfPath, "Vevaiosi_" . $progId . ".pdf");
+        $pdfAbs = realpath($pdfPath) ?: $pdfPath;
+        $filesToDelete[] = $pdfAbs;
+        $zip->addFile($pdfAbs, "Vevaiosi_" . $progId . ".pdf");
     } else {
         $zip->addFile($docxPath, "Vevaiosi_" . $progId . ".docx");
     }
 }
 
 $zip->close();
-$filesToDelete[] = $zipFileName; // Registered for automatic cleanup upon exit
+$filesToDelete[] = $zipAbs; // Registered for automatic cleanup upon exit
 
 // Trigger browser download of the ZIP file
-if (file_exists($zipFileName)) {
+if (file_exists($zipAbs)) {
     header('Content-Description: File Transfer');
     header('Content-Type: application/zip');
     header('Content-Disposition: attachment; filename="vevaioseis_' . $prSxetos . '.zip"');
@@ -231,11 +235,18 @@ if (file_exists($zipFileName)) {
     header('Expires: 0');
     header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
     header('Pragma: public');
-    header('Content-Length: ' . filesize($zipFileName));
+    header('Content-Length: ' . filesize($zipAbs));
     
     if (ob_get_length()) ob_clean();
     flush();
-    readfile($zipFileName);
+    readfile($zipAbs);
+    
+    // Explicit immediate cleanup right after readfile stream completes
+    foreach ($filesToDelete as $f) {
+        if (!empty($f) && file_exists($f)) {
+            @unlink($f);
+        }
+    }
 }
 
 // The shutdown function automatically runs upon exit, unlinking all temporary DOCX, PDF, and ZIP files.

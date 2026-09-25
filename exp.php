@@ -170,11 +170,29 @@ if (!$admin) {
     }
 }
 
+// Track temporary files for absolute path cleanup
+$filesToDelete = [];
+register_shutdown_function(function() use (&$filesToDelete) {
+    if (!empty($filesToDelete)) {
+        foreach ($filesToDelete as $file) {
+            if (!empty($file) && file_exists($file)) {
+                @unlink($file);
+            }
+        }
+    }
+});
+
 // Create DOCX file
 $docxFile = createFile($rec);
+$docxAbs = realpath($docxFile) ?: (__DIR__ . '/' . $docxFile);
+$filesToDelete[] = $docxAbs;
 
 // Automatically convert DOCX file to PDF
 $pdfFile = convertDocxToPdf($docxFile);
+$pdfAbs = ($pdfFile && file_exists($pdfFile)) ? (realpath($pdfFile) ?: (__DIR__ . '/' . $pdfFile)) : null;
+if ($pdfAbs) {
+    $filesToDelete[] = $pdfAbs;
+}
 
 // Close connection
 $conn->close();
@@ -183,8 +201,8 @@ $conn->close();
 if (ob_get_length()) ob_clean();
 
 // Determine file to serve (PDF if conversion succeeded, fallback to DOCX if failed)
-$downloadFile = ($pdfFile && file_exists($pdfFile)) ? $pdfFile : $docxFile;
-$isPdf = ($downloadFile === $pdfFile);
+$downloadFile = $pdfAbs ?: $docxAbs;
+$isPdf = ($downloadFile === $pdfAbs);
 
 // Offer the file for download
 if (file_exists($downloadFile)) {
@@ -203,9 +221,12 @@ if (file_exists($downloadFile)) {
     header('Content-Length: ' . filesize($downloadFile));
     readfile($downloadFile);
     
-    // Delete temporary files after download
-    if (file_exists($docxFile)) @unlink($docxFile);
-    if ($pdfFile && file_exists($pdfFile)) @unlink($pdfFile);
+    // Explicit immediate cleanup right after readfile stream completes
+    foreach ($filesToDelete as $f) {
+        if (!empty($f) && file_exists($f)) {
+            @unlink($f);
+        }
+    }
 }
 
 exit;
