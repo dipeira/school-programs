@@ -1,5 +1,10 @@
 <?php
 error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
+// Prevent timeout and memory exhaustion during bulk operations
+@set_time_limit(0);
+@ini_set('max_execution_time', 0);
+@ini_set('memory_limit', '512M');
+
 // Increase session timeout to 2 hours (7200 seconds) to prevent users from being signed out during slow typing
 ini_set('session.gc_maxlifetime', 7200);
 ini_set('session.cookie_lifetime', 0); // 0 means cookie expires when browser closes
@@ -8,6 +13,18 @@ session_start();
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] != 1) {
     die("Authentication Error...");
 }
+
+// Track temporary files for guaranteed cleanup upon completion or shutdown
+$filesToDelete = [];
+register_shutdown_function(function() use (&$filesToDelete) {
+    if (!empty($filesToDelete)) {
+        foreach ($filesToDelete as $file) {
+            if (!empty($file) && file_exists($file)) {
+                @unlink($file);
+            }
+        }
+    }
+});
 
 require_once('conf.php');
 date_default_timezone_set('Europe/Athens');
@@ -110,41 +127,25 @@ if (!$result || $result->num_rows == 0) {
 
 // Function to create a DOCX file from the given data ($dt) and return a link to download it
 function createFile($dt) {
-    // Load PhpWord library via Composer
     require_once('vendor/autoload.php');
 
-    // Load, alter, and save new DOCX based on the template
     $templ = new \PhpOffice\PhpWord\TemplateProcessor('files/vev_tmpl.docx');
 
-    // Set values from $dt into the template (replacing placeholders)
     foreach ($dt as $k => $v) {
         $templ->setValue("$k", htmlspecialchars((string)$v));
     }
     
-    // Save the modified DOCX file
     $docxFile = "files/exp_".$dt['id'].".docx";
     $templ->saveAs($docxFile);
     
-    // Return the link to download the generated DOCX file
     return $docxFile;
 }
 
 /**
- * Converts a DOCX file to PDF using headless LibreOffice.
+ * Converts multiple DOCX files to PDF in high-speed batches using headless LibreOffice.
  */
-function convertDocxToPdf($docxPath) {
-    if (!file_exists($docxPath)) {
-        return false;
-    }
-
-    $pathInfo = pathinfo($docxPath);
-    $outDir = realpath($pathInfo['dirname']);
-    $pdfFileName = $pathInfo['filename'] . '.pdf';
-    $pdfPath = $outDir . DIRECTORY_SEPARATOR . $pdfFileName;
-
-    if (file_exists($pdfPath)) {
-        @unlink($pdfPath);
-    }
+function convertDocxBatchToPdf(array $docxPaths) {
+    if (empty($docxPaths)) return;
 
     $sofficeCandidates = [
         'C:\Program Files\LibreOffice\program\soffice.com',
@@ -167,15 +168,36 @@ function convertDocxToPdf($docxPath) {
         $sofficeCmd = 'soffice';
     }
 
-    $cmd = $sofficeCmd . ' --headless --convert-to pdf ' . escapeshellarg(realpath($docxPath)) . ' --outdir ' . escapeshellarg($outDir);
-    @exec($cmd, $output, $returnCode);
+    $validPaths = array_filter($docxPaths, 'file_exists');
+    if (empty($validPaths)) return;
 
-    if (file_exists($pdfPath)) {
-        return $pdfPath;
+    $outDir = realpath(dirname(reset($validPaths)));
+    $chunks = array_chunk($validPaths, 50);
+
+    foreach ($chunks as $chunk) {
+        $escapedFiles = array_map(function($p) { return escapeshellarg(realpath($p)); }, $chunk);
+        $cmd = $sofficeCmd . ' --headless --convert-to pdf ' . implode(' ', $escapedFiles) . ' --outdir ' . escapeshellarg($outDir);
+        @exec($cmd, $output, $returnCode);
     }
-
-    return false;
 }
+
+// Generate all DOCX files first and track for cleanup
+$docxMap = [];
+while ($rec = $result->fetch_assoc()) {
+    $rec['sxetos'] = $prSxetos;
+    $rec['protocol'] = $protocol;
+    $rec['protocol_num'] = $protocol;
+    $rec['protocol_date'] = $protocol_date;
+    
+    $docxFile = createFile($rec);
+    $docxMap[$rec['id']] = $docxFile;
+    $filesToDelete[] = $docxFile;
+}
+
+$conn->close();
+
+// Batch convert all created DOCX files to PDF
+convertDocxBatchToPdf(array_values($docxMap));
 
 // Create ZIP file
 $zip = new ZipArchive();
@@ -184,52 +206,38 @@ if ($zip->open($zipFileName, ZipArchive::CREATE) !== TRUE) {
     die("Could not create ZIP file");
 }
 
-$tempFiles = [];
+// Add converted PDF files (or DOCX fallback) to the ZIP
+foreach ($docxMap as $progId => $docxPath) {
+    $pathInfo = pathinfo($docxPath);
+    $pdfPath = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '.pdf';
 
-while ($rec = $result->fetch_assoc()) {
-    $rec['sxetos'] = $prSxetos;
-    $rec['protocol'] = $protocol;
-    $rec['protocol_num'] = $protocol;
-    $rec['protocol_date'] = $protocol_date;
-    
-    // Create docx
-    $docxFile = createFile($rec);
-    $pdfFile = convertDocxToPdf($docxFile);
-    
-    if ($pdfFile && file_exists($pdfFile)) {
-        $zip->addFile($pdfFile, "Vevaiosi_" . $rec['id'] . ".pdf");
-        $tempFiles[] = $pdfFile;
+    if (file_exists($pdfPath)) {
+        $filesToDelete[] = $pdfPath;
+        $zip->addFile($pdfPath, "Vevaiosi_" . $progId . ".pdf");
     } else {
-        $zip->addFile($docxFile, "Vevaiosi_" . $rec['id'] . ".docx");
+        $zip->addFile($docxPath, "Vevaiosi_" . $progId . ".docx");
     }
-    $tempFiles[] = $docxFile;
 }
 
 $zip->close();
-$conn->close();
+$filesToDelete[] = $zipFileName; // Registered for automatic cleanup upon exit
 
-// Download the ZIP
+// Trigger browser download of the ZIP file
 if (file_exists($zipFileName)) {
     header('Content-Description: File Transfer');
     header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="'.basename($zipFileName).'"');
+    header('Content-Disposition: attachment; filename="vevaioseis_' . $prSxetos . '.zip"');
     header('Content-Transfer-Encoding: binary');
     header('Expires: 0');
     header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
     header('Pragma: public');
     header('Content-Length: ' . filesize($zipFileName));
     
-    // Flush buffer to avoid memory overflow for large files
-    ob_clean();
+    if (ob_get_length()) ob_clean();
     flush();
     readfile($zipFileName);
-    
-    // Clean up files
-    unlink($zipFileName);
-    foreach ($tempFiles as $tempFile) {
-        if (file_exists($tempFile)) {
-            unlink($tempFile);
-        }
-    }
 }
+
+// The shutdown function automatically runs upon exit, unlinking all temporary DOCX, PDF, and ZIP files.
 exit;
+
