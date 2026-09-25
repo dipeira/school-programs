@@ -29,6 +29,54 @@ function createFile($dt) {
     return $docxFile;
 }
 
+/**
+ * Converts a DOCX file to PDF using headless LibreOffice.
+ */
+function convertDocxToPdf($docxPath) {
+    if (!file_exists($docxPath)) {
+        return false;
+    }
+
+    $pathInfo = pathinfo($docxPath);
+    $outDir = realpath($pathInfo['dirname']);
+    $pdfFileName = $pathInfo['filename'] . '.pdf';
+    $pdfPath = $outDir . DIRECTORY_SEPARATOR . $pdfFileName;
+
+    if (file_exists($pdfPath)) {
+        @unlink($pdfPath);
+    }
+
+    $sofficeCandidates = [
+        'C:\Program Files\LibreOffice\program\soffice.com',
+        'C:\Program Files\LibreOffice\program\soffice.exe',
+        'C:\Program Files (x86)\LibreOffice\program\soffice.com',
+        'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+        'soffice',
+        'libreoffice'
+    ];
+
+    $sofficeCmd = null;
+    foreach ($sofficeCandidates as $candidate) {
+        if (file_exists($candidate)) {
+            $sofficeCmd = '"' . $candidate . '"';
+            break;
+        }
+    }
+
+    if (!$sofficeCmd) {
+        $sofficeCmd = 'soffice';
+    }
+
+    $cmd = $sofficeCmd . ' --headless --convert-to pdf ' . escapeshellarg(realpath($docxPath)) . ' --outdir ' . escapeshellarg($outDir);
+    @exec($cmd, $output, $returnCode);
+
+    if (file_exists($pdfPath)) {
+        return $pdfPath;
+    }
+
+    return false;
+}
+
 require_once('conf.php');
 date_default_timezone_set('Europe/Athens');
 
@@ -123,7 +171,10 @@ if (!$admin) {
 }
 
 // Create DOCX file
-$outFile = createFile($rec);
+$docxFile = createFile($rec);
+
+// Automatically convert DOCX file to PDF
+$pdfFile = convertDocxToPdf($docxFile);
 
 // Close connection
 $conn->close();
@@ -131,20 +182,30 @@ $conn->close();
 // FINAL HARDENING: Clean any output buffer before sending the file
 if (ob_get_length()) ob_clean();
 
+// Determine file to serve (PDF if conversion succeeded, fallback to DOCX if failed)
+$downloadFile = ($pdfFile && file_exists($pdfFile)) ? $pdfFile : $docxFile;
+$isPdf = ($downloadFile === $pdfFile);
+
 // Offer the file for download
-if (file_exists($outFile)) {
+if (file_exists($downloadFile)) {
     header('Content-Description: File Transfer');
-    header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    header('Content-Disposition: attachment; filename="'.basename($outFile).'"');
+    if ($isPdf) {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="exp_' . $progId . '.pdf"');
+    } else {
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment; filename="' . basename($docxFile) . '"');
+    }
     header('Content-Transfer-Encoding: binary');
     header('Expires: 0');
     header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
     header('Pragma: public');
-    header('Content-Length: ' . filesize($outFile));
-    readfile($outFile);
+    header('Content-Length: ' . filesize($downloadFile));
+    readfile($downloadFile);
     
-    // Delete the file after download
-    unlink($outFile);
+    // Delete temporary files after download
+    if (file_exists($docxFile)) @unlink($docxFile);
+    if ($pdfFile && file_exists($pdfFile)) @unlink($pdfFile);
 }
 
 exit;

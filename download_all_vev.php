@@ -129,6 +129,54 @@ function createFile($dt) {
     return $docxFile;
 }
 
+/**
+ * Converts a DOCX file to PDF using headless LibreOffice.
+ */
+function convertDocxToPdf($docxPath) {
+    if (!file_exists($docxPath)) {
+        return false;
+    }
+
+    $pathInfo = pathinfo($docxPath);
+    $outDir = realpath($pathInfo['dirname']);
+    $pdfFileName = $pathInfo['filename'] . '.pdf';
+    $pdfPath = $outDir . DIRECTORY_SEPARATOR . $pdfFileName;
+
+    if (file_exists($pdfPath)) {
+        @unlink($pdfPath);
+    }
+
+    $sofficeCandidates = [
+        'C:\Program Files\LibreOffice\program\soffice.com',
+        'C:\Program Files\LibreOffice\program\soffice.exe',
+        'C:\Program Files (x86)\LibreOffice\program\soffice.com',
+        'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+        'soffice',
+        'libreoffice'
+    ];
+
+    $sofficeCmd = null;
+    foreach ($sofficeCandidates as $candidate) {
+        if (file_exists($candidate)) {
+            $sofficeCmd = '"' . $candidate . '"';
+            break;
+        }
+    }
+
+    if (!$sofficeCmd) {
+        $sofficeCmd = 'soffice';
+    }
+
+    $cmd = $sofficeCmd . ' --headless --convert-to pdf ' . escapeshellarg(realpath($docxPath)) . ' --outdir ' . escapeshellarg($outDir);
+    @exec($cmd, $output, $returnCode);
+
+    if (file_exists($pdfPath)) {
+        return $pdfPath;
+    }
+
+    return false;
+}
+
 // Create ZIP file
 $zip = new ZipArchive();
 $zipFileName = 'files/vevaioseis_' . $prSxetos . '_' . uniqid() . '.zip';
@@ -146,10 +194,14 @@ while ($rec = $result->fetch_assoc()) {
     
     // Create docx
     $docxFile = createFile($rec);
+    $pdfFile = convertDocxToPdf($docxFile);
     
-    // Add to ZIP (use a clean filename inside the ZIP, e.g., "Vevaiosi_123.docx")
-    $zip->addFile($docxFile, "Vevaiosi_" . $rec['id'] . ".docx");
-    
+    if ($pdfFile && file_exists($pdfFile)) {
+        $zip->addFile($pdfFile, "Vevaiosi_" . $rec['id'] . ".pdf");
+        $tempFiles[] = $pdfFile;
+    } else {
+        $zip->addFile($docxFile, "Vevaiosi_" . $rec['id'] . ".docx");
+    }
     $tempFiles[] = $docxFile;
 }
 
