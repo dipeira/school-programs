@@ -1,5 +1,13 @@
 <?php
+session_start();
 header('Content-Type: application/json');
+
+// Security check: require admin session
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== 1 || empty($_SESSION['admin'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized access. Administrator privileges required.']);
+    exit;
+}
 
 if (!isset($_POST['configData'])) {
     http_response_code(400);

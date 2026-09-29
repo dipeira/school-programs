@@ -2,6 +2,30 @@
 session_start();
 require_once('conf.php'); // Include your configuration file
 
+if (!function_exists('db_connect')) {
+    function db_connect() {
+        global $prDbhost, $prDbusername, $prDbpassword, $prDbname;
+        $previous_reporting = mysqli_report(MYSQLI_REPORT_OFF);
+        
+        $conn = @new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+        if ($conn && !$conn->connect_error) {
+            $conn->set_charset("utf8");
+            mysqli_report($previous_reporting);
+            return $conn;
+        }
+        
+        $conn = @new mysqli($prDbhost, $prDbusername, '', $prDbname);
+        if ($conn && !$conn->connect_error) {
+            $conn->set_charset("utf8");
+            mysqli_report($previous_reporting);
+            return $conn;
+        }
+        
+        mysqli_report($previous_reporting);
+        die("Database connection failed: Access denied or database does not exist.");
+    }
+}
+
 function getTableName($yearParam) {
     global $prTable;
     if (empty($yearParam)) {

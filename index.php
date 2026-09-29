@@ -9,6 +9,30 @@ if (!isset($_SESSION['loggedin'])) {
 require_once('conf.php');
 date_default_timezone_set('Europe/Athens');
 
+if (!function_exists('db_connect')) {
+    function db_connect() {
+        global $prDbhost, $prDbusername, $prDbpassword, $prDbname;
+        $previous_reporting = mysqli_report(MYSQLI_REPORT_OFF);
+        
+        $conn = @new mysqli($prDbhost, $prDbusername, $prDbpassword, $prDbname);
+        if ($conn && !$conn->connect_error) {
+            $conn->set_charset("utf8");
+            mysqli_report($previous_reporting);
+            return $conn;
+        }
+        
+        $conn = @new mysqli($prDbhost, $prDbusername, '', $prDbname);
+        if ($conn && !$conn->connect_error) {
+            $conn->set_charset("utf8");
+            mysqli_report($previous_reporting);
+            return $conn;
+        }
+        
+        mysqli_report($previous_reporting);
+        die("Database connection failed: Access denied or database does not exist.");
+    }
+}
+
 
 // get school data
 function get_school($code, $conn) {
@@ -444,7 +468,7 @@ if (!$prDebug)
 	$em1 = $uid . "@sch.gr";
 	$em2 = phpCAS::getAttribute('mail');
 	
-	$_SESSION['admin'] = ($uid === $prAdmin1 || $uid === $prAdmin2 || $uid === 'dipeira' || $uid === 'taypeira') ? 1 : 0;
+	$_SESSION['admin'] = ($uid === ($prAdmin1 ?? '') || $uid === ($prAdmin2 ?? '') || $uid === 'dipeira' || $uid === 'taypeira') ? 1 : 0;
 	$_SESSION['email1'] = $em1;
 	$_SESSION['email2'] = $em2;
 	$_SESSION['uid'] = $uid;
@@ -457,7 +481,7 @@ else {
   $em1 = $prem1;
   $em2 = $prem2;
 
-  $_SESSION['admin'] = ($uid === $prAdmin1 || $uid === $prAdmin2) ? 1 : 0;
+  $_SESSION['admin'] = ($uid === ($prAdmin1 ?? '') || $uid === ($prAdmin2 ?? '')) ? 1 : 0;
   $_SESSION['email1'] = $em1;
   $_SESSION['email2'] = $em2;
   $_SESSION['uid'] = $uid;
