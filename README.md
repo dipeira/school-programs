@@ -82,10 +82,26 @@ $prDbusername = 'root';
 $prDbpassword = '';
 ```
 
-### 6. Ρύθμιση Παραμέτρων (Metadata)
+### 6. Ρύθμιση Παραμέτρων (Metadata) & Δικαιώματα στο Linux
 Δεν απαιτείται να επεξεργαστείτε χειροκίνητα το αρχείο `config.json`. Αφού συνδεθείτε στο σύστημα με λογαριασμό διαχειριστή, πατήστε το κουμπί **Παράμετροι**. Από εκεί μπορείτε να ρυθμίσετε μέσα από γραφικό περιβάλλον το τρέχον σχολικό έτος, τα μεταδεδομένα και κλειδώματα, τα οποία θα αποθηκευτούν αυτόματα. 
 
-*(Προσοχή: Βεβαιωθείτε ότι ο χρήστης www-data έχει δικαιώματα εγγραφής στο αρχείο `config.json`. Στον Ubuntu server εκτελέστε: `sudo chmod 770 config.json`)*
+* **Δικαιώματα στον Ubuntu Server:**  
+  Βεβαιωθείτε ότι ο web server (`www-data`) έχει δικαίωμα εγγραφής στο αρχείο `config.json`:
+  ```bash
+  sudo chmod 666 config.json
+  ```
+  *(ή εναλλακτικά: `sudo chown administrator:www-data config.json && sudo chmod 664 config.json`)*
+
+* **Μόνιμη Αυτοματοποίηση μετά από κάθε `git pull`:**  
+  Για να μην απαιτείται χειροκίνητη εκτέλεση του `chmod` μετά από κάθε μελλοντικό `git pull`, μπορείτε να ενεργοποιήσετε το ενσωματωμένο Git hook εκτελώντας μία μόνο φορά:
+  ```bash
+  cat << 'EOF' > .git/hooks/post-merge
+  #!/bin/sh
+  chmod 666 config.json 2>/dev/null || true
+  chmod -R 775 uploads/ files/ 2>/dev/null || true
+  EOF
+  chmod +x .git/hooks/post-merge
+  ```
 
 ### 7. SSO & CAS (ΠΣΔ)
 Η εφαρμογή είναι προ-ρυθμισμένη για χρήση με το **sso.sch.gr**.
