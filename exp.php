@@ -30,6 +30,42 @@ function createFile($dt) {
 }
 
 /**
+ * Locate the LibreOffice executable command across Linux and Windows environments.
+ */
+function getLibreOfficeCommand() {
+    $candidates = [
+        'C:\Program Files\LibreOffice\program\soffice.com',
+        'C:\Program Files\LibreOffice\program\soffice.exe',
+        'C:\Program Files (x86)\LibreOffice\program\soffice.com',
+        'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+        '/usr/bin/soffice',
+        '/usr/bin/libreoffice',
+        '/usr/local/bin/soffice',
+        '/usr/local/bin/libreoffice',
+        '/opt/libreoffice/program/soffice',
+        '/snap/bin/libreoffice'
+    ];
+
+    foreach ($candidates as $cand) {
+        if (file_exists($cand)) {
+            return (DIRECTORY_SEPARATOR === '\\') ? '"' . $cand . '"' : escapeshellcmd($cand);
+        }
+    }
+
+    // Dynamic search in PATH
+    $whichCmd = (DIRECTORY_SEPARATOR === '\\') ? 'where soffice 2>nul' : 'which soffice 2>/dev/null || which libreoffice 2>/dev/null';
+    $pathFound = @shell_exec($whichCmd);
+    if ($pathFound) {
+        $firstLine = trim(explode("\n", trim($pathFound))[0]);
+        if (!empty($firstLine) && (file_exists($firstLine) || DIRECTORY_SEPARATOR !== '\\')) {
+            return (DIRECTORY_SEPARATOR === '\\') ? '"' . $firstLine . '"' : escapeshellcmd($firstLine);
+        }
+    }
+
+    return (DIRECTORY_SEPARATOR === '\\') ? 'soffice' : 'libreoffice';
+}
+
+/**
  * Converts a DOCX file to PDF using headless LibreOffice.
  */
 function convertDocxToPdf($docxPath) {
@@ -46,31 +82,18 @@ function convertDocxToPdf($docxPath) {
         @unlink($pdfPath);
     }
 
-    $sofficeCandidates = [
-        'C:\Program Files\LibreOffice\program\soffice.com',
-        'C:\Program Files\LibreOffice\program\soffice.exe',
-        'C:\Program Files (x86)\LibreOffice\program\soffice.com',
-        'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
-        'soffice',
-        'libreoffice'
-    ];
+    $sofficeCmd = getLibreOfficeCommand();
 
-    $sofficeCmd = null;
-    foreach ($sofficeCandidates as $candidate) {
-        if (file_exists($candidate)) {
-            $sofficeCmd = '"' . $candidate . '"';
-            break;
-        }
-    }
+    // Critical for Linux / Ubuntu Server under www-data (provides writable user profile)
+    $tmpDir = sys_get_temp_dir();
+    $profileUrl = 'file:///' . str_replace('\\', '/', $tmpDir) . '/lo_profile';
+    $profileArg = '-env:UserInstallation=' . (DIRECTORY_SEPARATOR === '\\' ? '"' . $profileUrl . '"' : escapeshellarg($profileUrl));
+    @putenv('HOME=' . $tmpDir);
 
-    if (!$sofficeCmd) {
-        $sofficeCmd = 'soffice';
-    }
-
-    $cmd = $sofficeCmd . ' --headless --convert-to pdf ' . escapeshellarg(realpath($docxPath)) . ' --outdir ' . escapeshellarg($outDir);
+    $cmd = $sofficeCmd . ' ' . $profileArg . ' --headless --convert-to pdf ' . escapeshellarg(realpath($docxPath)) . ' --outdir ' . escapeshellarg($outDir);
     @exec($cmd, $output, $returnCode);
 
-    if (file_exists($pdfPath)) {
+    if (file_exists($pdfPath) && filesize($pdfPath) > 0) {
         return $pdfPath;
     }
 

