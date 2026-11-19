@@ -1161,6 +1161,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 <input type="hidden" id="selectedYear" value="<?php echo htmlspecialchars($prSxetos); ?>">
 <input type="hidden" id="isAdmin" value="<?php echo $_SESSION['admin'] ? '1' : '0'; ?>">
 <input type="hidden" id="showVev" value="<?php echo $showVev ? '1' : '0'; ?>">
+<input type="hidden" id="canChooseFormat" value="<?php echo (isset($_SESSION['uid']) && in_array($_SESSION['uid'], ['dipeira', 'taypeira'])) ? '1' : '0'; ?>">
 <script src="script.js?v=<?php echo time(); ?>" type="text/javascript"></script>
 
 </body>

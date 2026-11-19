@@ -233,8 +233,13 @@ $docxFile = createFile($rec);
 $docxAbs = realpath($docxFile) ?: (__DIR__ . '/' . $docxFile);
 $filesToDelete[] = $docxAbs;
 
-// Automatically convert DOCX file to PDF
-$pdfFile = convertDocxToPdf($docxFile);
+// Determine requested format (only dipeira and taypeira can explicitly choose DOCX)
+$userUid = $_SESSION['uid'] ?? '';
+$canChooseFormat = in_array($userUid, ['dipeira', 'taypeira']);
+$requestedFormat = ($canChooseFormat && isset($_GET['format']) && strtolower($_GET['format']) === 'docx') ? 'docx' : 'pdf';
+
+// Automatically convert DOCX file to PDF (unless DOCX format is explicitly requested)
+$pdfFile = ($requestedFormat === 'docx') ? null : convertDocxToPdf($docxFile);
 $pdfAbs = ($pdfFile && file_exists($pdfFile)) ? (realpath($pdfFile) ?: (__DIR__ . '/' . $pdfFile)) : null;
 if ($pdfAbs) {
     $filesToDelete[] = $pdfAbs;

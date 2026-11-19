@@ -120,7 +120,7 @@ $prDbpassword = '';
 - `index.php`: Η κεντρική σελίδα της εφαρμογής.
 - `db.php`: Διαχείριση των κλήσεων προς τη βάση δεδομένων (AJAX).
 - `exp.php`: Παραγωγή και αυτόματη μετατροπή βεβαιώσεων σε PDF για μεμονωμένα προγράμματα (με ενσωματωμένο headless LibreOffice runner και fallback σε DOCX).
-- `download_all_vev.php`: Μαζική παραγωγή, ταχεία (batch) μετατροπή σε PDF μέσω headless LibreOffice και λήψη αρχείου ZIP με αυτόματο καθαρισμό προσωρινών αρχείων.
+- `download_all_vev.php`: Μαζική παραγωγή και λήψη αρχείου ZIP (μετατροπή σε PDF μέσω headless LibreOffice ή επιλογή DOCX για τους διαχειριστές `dipeira`/`taypeira`) με αυτόματο καθαρισμό προσωρινών αρχείων.
 - `help_catalog.php`: Αυτόνομη σελίδα οδηγιών για τη δημοσίευση στον κατάλογο.
 - `keepalive.php`: Ελαφρύ endpoint περιοδικής ανανέωσης συνεδρίας (session heartbeat) για αποτροπή timeout κατά την πληκτρολόγηση.
 - `files/`: Περιλαμβάνει τη βάση δεδομένων (`full_schema.sql`) και το πρότυπο βεβαίωσης (`vev_tmpl.docx`).

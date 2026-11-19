@@ -67,6 +67,12 @@ if ($configData) {
 
 $admin = $_SESSION['admin'] ?? 0;
 $sid = $_SESSION['sid'] ?? 0;
+$uid = $_SESSION['uid'] ?? '';
+$canChooseFormat = in_array($uid, ['dipeira', 'taypeira']);
+$format = 'pdf';
+if ($canChooseFormat && isset($_GET['format']) && strtolower($_GET['format']) === 'docx') {
+    $format = 'docx';
+}
 
 $prTable = 'progs';
 $prSxetos = $currentYear;
@@ -242,8 +248,10 @@ while ($rec = $result->fetch_assoc()) {
 
 $conn->close();
 
-// Batch convert all created DOCX files to PDF
-convertDocxBatchToPdf(array_values($docxMap));
+// Batch convert all created DOCX files to PDF (only when PDF format is requested)
+if ($format === 'pdf') {
+    convertDocxBatchToPdf(array_values($docxMap));
+}
 
 // Create ZIP file
 $zip = new ZipArchive();
@@ -254,12 +262,12 @@ if ($zip->open($zipAbs, ZipArchive::CREATE) !== TRUE) {
     die("Could not create ZIP file");
 }
 
-// Add converted PDF files (or DOCX fallback) to the ZIP
+// Add converted PDF files (or DOCX if requested or as fallback) to the ZIP
 foreach ($docxMap as $progId => $docxPath) {
     $pathInfo = pathinfo($docxPath);
     $pdfPath = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $pathInfo['filename'] . '.pdf';
 
-    if (file_exists($pdfPath)) {
+    if ($format === 'pdf' && file_exists($pdfPath)) {
         $pdfAbs = realpath($pdfPath) ?: $pdfPath;
         $filesToDelete[] = $pdfAbs;
         $zip->addFile($pdfAbs, "Vevaiosi_" . $progId . ".pdf");
@@ -273,9 +281,10 @@ $filesToDelete[] = $zipAbs; // Registered for automatic cleanup upon exit
 
 // Trigger browser download of the ZIP file
 if (file_exists($zipAbs)) {
+    $zipDownloadName = 'vevaioseis_' . $prSxetos . ($format === 'docx' ? '_docx.zip' : '.zip');
     header('Content-Description: File Transfer');
     header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="vevaioseis_' . $prSxetos . '.zip"');
+    header('Content-Disposition: attachment; filename="' . $zipDownloadName . '"');
     header('Content-Transfer-Encoding: binary');
     header('Expires: 0');
     header('Cache-Control: must-revalidate, post-check=0, pre-check=0');

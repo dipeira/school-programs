@@ -120,30 +120,71 @@ $(document).ready(function() {
                             action: function ( e, dt, node, config ) {
                                 if (e && e.preventDefault) e.preventDefault();
                                 var year = $('#selectedYear').val() || '';
+                                var canChooseFormat = $('#canChooseFormat').val() === '1';
                                 var messageText = 'Η διαδικασία αυτή ενδέχεται να διαρκέσει αρκετά λεπτά. Είστε σίγουροι ότι θέλετε να συνεχίσετε;';
                                 
-                                function triggerDownload() {
-                                    window.location.href = 'download_all_vev.php' + (year ? '?year=' + year : '');
+                                function triggerDownload(format) {
+                                    var params = [];
+                                    if (year) params.push('year=' + encodeURIComponent(year));
+                                    if (format) params.push('format=' + encodeURIComponent(format));
+                                    var url = 'download_all_vev.php' + (params.length ? '?' + params.join('&') : '');
+                                    window.location.href = url;
                                 }
 
                                 if (typeof Swal !== 'undefined') {
-                                    Swal.fire({
-                                        title: 'Προσοχή!',
-                                        text: messageText,
-                                        icon: 'warning',
-                                        showCancelButton: true,
-                                        confirmButtonColor: '#198754',
-                                        cancelButtonColor: '#6c757d',
-                                        confirmButtonText: 'Ναι, προχώρησε!',
-                                        cancelButtonText: 'Ακύρωση'
-                                    }).then((result) => {
-                                        if (result.isConfirmed) {
-                                            triggerDownload();
-                                        }
-                                    });
+                                    if (canChooseFormat) {
+                                        Swal.fire({
+                                            title: 'Μαζική Λήψη Βεβαιώσεων',
+                                            html: '<p class="text-muted mb-3" style="font-size:0.95rem;">Η διαδικασία μετατροπής ενδέχεται να διαρκέσει μερικά λεπτά ανάλογα με το πλήθος των αρχείων.</p>' +
+                                                  '<div class="text-start p-3 border rounded bg-light mb-2">' +
+                                                  '  <div class="fw-bold mb-2 text-dark">Επιλέξτε μορφή αρχείων για το αρχείο ZIP:</div>' +
+                                                  '  <div class="form-check mb-3">' +
+                                                  '    <input class="form-check-input" type="radio" name="swal_vev_format" id="swal_fmt_pdf" value="pdf" checked>' +
+                                                  '    <label class="form-check-label fw-bold text-danger" for="swal_fmt_pdf" style="cursor:pointer;">' +
+                                                  '      <i class="bi bi-file-earmark-pdf me-1"></i>Αρχεία PDF (.pdf)' +
+                                                  '    </label>' +
+                                                  '    <div class="small text-muted">Έτοιμα αρχεία PDF για αρχειοθέτηση ή εκτύπωση</div>' +
+                                                  '  </div>' +
+                                                  '  <div class="form-check">' +
+                                                  '    <input class="form-check-input" type="radio" name="swal_vev_format" id="swal_fmt_docx" value="docx">' +
+                                                  '    <label class="form-check-label fw-bold text-primary" for="swal_fmt_docx" style="cursor:pointer;">' +
+                                                  '      <i class="bi bi-file-earmark-word me-1"></i>Αρχεία Word (.docx)' +
+                                                  '    </label>' +
+                                                  '    <div class="small text-muted">Επεξεργάσιμα έγγραφα Word (άμεση λήψη χωρίς αναμονή μετατροπής)</div>' +
+                                                  '  </div>' +
+                                                  '</div>',
+                                            showCancelButton: true,
+                                            confirmButtonColor: '#198754',
+                                            cancelButtonColor: '#6c757d',
+                                            confirmButtonText: '<i class="bi bi-download me-1"></i>Λήψη ZIP',
+                                            cancelButtonText: 'Ακύρωση',
+                                            preConfirm: function() {
+                                                return $('input[name="swal_vev_format"]:checked').val() || 'pdf';
+                                            }
+                                        }).then(function(result) {
+                                            if (result.isConfirmed) {
+                                                triggerDownload(result.value);
+                                            }
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Προσοχή!',
+                                            text: messageText,
+                                            icon: 'warning',
+                                            showCancelButton: true,
+                                            confirmButtonColor: '#198754',
+                                            cancelButtonColor: '#6c757d',
+                                            confirmButtonText: 'Ναι, προχώρησε!',
+                                            cancelButtonText: 'Ακύρωση'
+                                        }).then(function(result) {
+                                            if (result.isConfirmed) {
+                                                triggerDownload('pdf');
+                                            }
+                                        });
+                                    }
                                 } else {
                                     if (confirm(messageText)) {
-                                        triggerDownload();
+                                        triggerDownload('pdf');
                                     }
                                 }
                             },
