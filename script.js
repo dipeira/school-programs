@@ -957,7 +957,7 @@ $(document).ready(function() {
                                 showAlert("Επιτυχής αποθήκευση παραμέτρων!", 'success');
                                 $('#configModal').modal('hide');
                                 setTimeout(function() {
-                                    location.reload();
+                                    window.location.href = 'index.php';
                                 }, 1000);
                             } else {
                                 showAlert("Σφάλμα αποθήκευσης πρωτοκόλλων.", 'danger');

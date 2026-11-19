@@ -58,6 +58,7 @@ $configData = json_decode($jsonString, true);
 foreach ($configData as $configItem) {
     ${$configItem['name']} = $configItem['value'];
 }
+$activeSxetos = $prSxetos;
 
 // Check for records to enable dynamic titles and get available years
 $conn_years = db_connect();
@@ -270,8 +271,9 @@ if (!$isAuthenticated):
                                 <div class="d-flex align-items-center gap-2">
                                     <label for="publicYearSelect" class="fw-semibold text-muted mb-0">Σχολικό Έτος:</label>
                                     <select id="publicYearSelect" class="form-select form-select-sm w-auto">
-                                        <option value="">Τρέχον Έτος (Ενεργό)</option>
+                                        <option value=""><?= htmlspecialchars($activeSxetos) ?> (Τρέχον Έτος)</option>
                                         <?php foreach ($availableYears as $y): ?>
+                                            <?php if ($y === $activeSxetos) continue; ?>
                                             <option value="<?= htmlspecialchars($y) ?>"><?= htmlspecialchars($y) ?></option>
                                         <?php endforeach; ?>
                                     </select>
@@ -557,8 +559,10 @@ if (!$_SESSION['admin'] && isset($conn) && !$conn->connect_error) {
     echo '<form method="GET" class="d-inline-flex align-items-center mb-3 mt-2">';
     echo '<label class="fw-bold me-2">Επιλογή Έτους: </label>';
     echo '<select name="year" class="form-select w-auto" onchange="if(this.value){this.form.submit();}else{window.location.href=\'index.php\';}">';
-    echo '<option value="">Τρέχον Έτος (Ενεργό)</option>';
+    $currentSel = empty($_GET['year']) ? 'selected' : '';
+    echo '<option value="" ' . $currentSel . '>' . htmlspecialchars($activeSxetos) . ' (Τρέχον Έτος)</option>';
     foreach ($availableYears as $y) {
+        if ($y === $activeSxetos) continue;
         $sel = (isset($_GET['year']) && $_GET['year'] === $y) ? 'selected' : '';
         echo '<option value="' . htmlspecialchars($y) . '" ' . $sel . '>' . htmlspecialchars($y) . '</option>';
     }
@@ -1123,7 +1127,7 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
         </div>
       </div>
       <div class="modal-footer">
-        <input type="hidden" id="currentSxetos" value="<?php echo $prSxetos; ?>">
+        <input type="hidden" id="currentSxetos" value="<?php echo htmlspecialchars($activeSxetos); ?>">
         <input type="hidden" id="availableYearsHidden" value="<?php echo implode(',', $availableYears); ?>">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi-x-circle"></i>&nbsp;Κλείσιμο</button>&nbsp;
         <button type="button" class="btn btn-primary" id="saveConfigBtn"><i class="bi-save"></i>&nbsp;Αποθήκευση</button>
