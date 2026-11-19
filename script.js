@@ -910,6 +910,8 @@ $(document).ready(function() {
 
     // save parameters from modal to file
     function saveConfigData() {
+        var $saveBtn = $('#saveConfigBtn');
+        var originalBtnHtml = $saveBtn.html();
         var configData = [];
         var yearMetadata = [];
     
@@ -935,6 +937,22 @@ $(document).ready(function() {
             });
         }
     
+        $saveBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Αποθήκευση...');
+
+        function showError(msg) {
+            $saveBtn.prop('disabled', false).html(originalBtnHtml);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Σφάλμα!',
+                    text: 'Οι αλλαγές δεν αποθηκεύτηκαν. ' + (msg || ''),
+                    icon: 'error',
+                    confirmButtonText: 'Εντάξει'
+                });
+            } else {
+                alert('Οι αλλαγές δεν αποθηκεύτηκαν: ' + msg);
+            }
+        }
+
         // Save General Settings
         $.ajax({
             type: "POST",
@@ -953,20 +971,36 @@ $(document).ready(function() {
                         },
                         dataType: "json",
                         success: function(res) {
+                            $saveBtn.prop('disabled', false).html(originalBtnHtml);
                             if (res.success) {
-                                showAlert("Επιτυχής αποθήκευση παραμέτρων!", 'success');
                                 $('#configModal').modal('hide');
-                                setTimeout(function() {
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        title: 'Επιτυχία!',
+                                        text: 'Οι αλλαγές αποθηκεύτηκαν επιτυχώς!',
+                                        icon: 'success',
+                                        confirmButtonText: 'Εντάξει'
+                                    }).then(() => {
+                                        window.location.href = 'index.php';
+                                    });
+                                } else {
+                                    alert('Οι αλλαγές αποθηκεύτηκαν επιτυχώς!');
                                     window.location.href = 'index.php';
-                                }, 1000);
+                                }
                             } else {
-                                showAlert("Σφάλμα αποθήκευσης πρωτοκόλλων.", 'danger');
+                                showError(res.error || 'Σφάλμα αποθήκευσης πρωτοκόλλων.');
                             }
+                        },
+                        error: function(err) {
+                            showError('Αποτυχία επικοινωνίας με τη βάση δεδομένων.');
                         }
                     });
                 } else {
-                    showAlert("Σφάλμα αποθήκευσης παραμέτρων.", 'danger');
+                    showError(response.error || 'Σφάλμα αποθήκευσης παραμέτρων.');
                 }
+            },
+            error: function(err) {
+                showError('Αποτυχία επικοινωνίας με τον διακομιστή.');
             }
         });
     }

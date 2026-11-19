@@ -554,7 +554,13 @@ if (!$_SESSION['admin'] && isset($conn) && !$conn->connect_error) {
 		$canDelete = $_SESSION['admin'] ? 1 : 0;
 		echo '<div class="container">';
 		echo "<center><h1><i class='bi-newspaper'></i>&nbsp;&nbsp;Προγράμματα Σχολικών Δραστηριοτήτων $prSxetos</h1></center>";
-    echo "<h4>Σχολείο: " . $sch_name . "</h4>";
+    $currentUser = $_SESSION['uid'] ?? $uid ?? '';
+    echo "<div class='d-flex flex-wrap justify-content-between align-items-center mb-2'>";
+    echo "<h4 class='mb-0'>Σχολείο: " . htmlspecialchars($sch_name) . "</h4>";
+    if (!empty($currentUser)) {
+        echo "<div class='fs-5 text-muted'><i class='bi bi-person-circle text-primary me-1'></i>Χρήστης: <strong class='text-dark'>" . htmlspecialchars($currentUser) . "</strong></div>";
+    }
+    echo "</div>";
     
     echo '<form method="GET" class="d-inline-flex align-items-center mb-3 mt-2">';
     echo '<label class="fw-bold me-2">Επιλογή Έτους: </label>';
