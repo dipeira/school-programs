@@ -1,4 +1,7 @@
 <?php
+// Increase session timeout to 2 hours (7200 seconds) to prevent users from being signed out during slow typing
+ini_set('session.gc_maxlifetime', 7200);
+ini_set('session.cookie_lifetime', 0); // 0 means cookie expires when browser closes
 session_start();
 header('Content-Type: application/json');
 

@@ -1362,4 +1362,30 @@ $(document).ready(function() {
     function htmlEntities(str) {
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+
+    // Session Keep-Alive: Automatically refresh active session every 5 minutes while user is logged in
+    if ($('#btnLogout').length > 0) {
+        function pingSession() {
+            $.ajax({
+                url: 'keepalive.php',
+                type: 'GET',
+                cache: false,
+                dataType: 'json'
+            }).done(function(data) {
+                if (data && data.status === 'alive') {
+                    console.log('Session keepalive ping successful at ' + new Date().toLocaleTimeString());
+                }
+            });
+        }
+
+        // Ping every 5 minutes (300,000 ms)
+        setInterval(pingSession, 5 * 60 * 1000);
+
+        // Also ping when the user returns/focuses back on the browser tab
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                pingSession();
+            }
+        });
+    }
 });
