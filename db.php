@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
 
 // SAVE YEAR METADATA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_metadata') {
-    if (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira')) {
+    if (empty($_SESSION['admin']) && (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira'))) {
         echo json_encode(['success' => false, 'error' => 'Unauthorized action.']);
         exit;
     }

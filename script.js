@@ -991,16 +991,40 @@ $(document).ready(function() {
                                 showError(res.error || 'Σφάλμα αποθήκευσης πρωτοκόλλων.');
                             }
                         },
-                        error: function(err) {
-                            showError('Αποτυχία επικοινωνίας με τη βάση δεδομένων.');
+                        error: function(xhr) {
+                            var errorMsg = 'Αποτυχία επικοινωνίας με τη βάση δεδομένων.';
+                            if (xhr.responseJSON && xhr.responseJSON.error) {
+                                errorMsg = xhr.responseJSON.error;
+                            } else if (xhr.responseText) {
+                                try {
+                                    var parsed = JSON.parse(xhr.responseText);
+                                    if (parsed && parsed.error) errorMsg = parsed.error;
+                                } catch (e) {}
+                            }
+                            showError(errorMsg);
                         }
                     });
                 } else {
                     showError(response.error || 'Σφάλμα αποθήκευσης παραμέτρων.');
                 }
             },
-            error: function(err) {
-                showError('Αποτυχία επικοινωνίας με τον διακομιστή.');
+            error: function(xhr) {
+                var errorMsg = 'Αποτυχία επικοινωνίας με τον διακομιστή.';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                } else if (xhr.responseText) {
+                    try {
+                        var parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.error) errorMsg = parsed.error;
+                    } catch (e) {
+                        if (xhr.status === 403) {
+                            errorMsg = 'Δεν έχετε δικαιώματα διαχειριστή (403 Forbidden).';
+                        } else if (xhr.status === 500) {
+                            errorMsg = 'Σφάλμα διακομιστή (500). Ελέγξτε τα δικαιώματα εγγραφής του αρχείου config.json.';
+                        }
+                    }
+                }
+                showError(errorMsg);
             }
         });
     }
