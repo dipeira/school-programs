@@ -269,6 +269,72 @@ $(document).ready(function() {
         $('#alertContainer').append(alertHTML); // Append alert to container
     }
 
+    // Themes management for dynamic theme select
+    var themesData = {};
+    function loadThemes(callback) {
+        if (Object.keys(themesData).length > 0) {
+            if (callback) callback();
+            return;
+        }
+        $.getJSON('db.php', { action: 'get_themes' }, function(data) {
+            themesData = {};
+            $.each(data, function(i, item) {
+                if (!themesData[item.parent]) {
+                    themesData[item.parent] = [];
+                }
+                themesData[item.parent].push(item);
+            });
+            if (callback) callback();
+        });
+    }
+
+    function updateThemeOptions(category, selectedTheme) {
+        var $theme = $('#theme');
+        $theme.empty();
+
+        if (!category) {
+            $theme.append($('<option>', { value: '', text: '-- Επιλέξτε πρώτα Κατηγορία --' }));
+            return;
+        }
+
+        $theme.append($('<option>', { value: '', text: '-- Επιλέξτε Θεματολογία --' }));
+
+        if (themesData && themesData[category]) {
+            var found = false;
+            $.each(themesData[category], function(idx, item) {
+                var isSelected = (selectedTheme && item.value === selectedTheme);
+                if (isSelected) found = true;
+                $theme.append($('<option>', {
+                    value: item.value,
+                    text: item.value,
+                    selected: isSelected
+                }));
+            });
+
+            // If an existing record has a custom or legacy theme not in list, preserve it
+            if (selectedTheme && !found) {
+                $theme.append($('<option>', {
+                    value: selectedTheme,
+                    text: selectedTheme,
+                    selected: true
+                }));
+            }
+        }
+
+        if (selectedTheme) {
+            $theme.val(selectedTheme);
+        }
+    }
+
+    // Preload themes on initialization
+    loadThemes();
+
+    // Dynamically update theme select when category changes
+    $('#categ').on('change', function() {
+        var selectedCat = $(this).val();
+        updateThemeOptions(selectedCat, null);
+    });
+
 
     function replaceSelect2(schId){
         var $sch1 = $('#sch1');
@@ -322,6 +388,9 @@ $(document).ready(function() {
         } else {
             $('#editForm')[0].reset();
         }
+        loadThemes(function() {
+            updateThemeOptions($('#categ').val(), null);
+        });
     });
 
 
@@ -355,10 +424,12 @@ $(document).ready(function() {
                 // Set the value of the form field
                 if (key === 'praxidate') {
                     $field.val(formatDate(value));
-                                } else if ($field.length) {
+                } else if ($field.length) {
                     if (key === 'vev' || key === 'chk') {
                         var cleanVal = (value !== null && value !== undefined) ? String(value).trim() : '';
                         $field.val(cleanVal);
+                    } else if (key === 'categ' || key === 'theme') {
+                        // Handled together right after loop to maintain dependency
                     } else {
                         $field.val(value);
                     }
@@ -380,6 +451,11 @@ $(document).ready(function() {
                         $("#sch1").prop("disabled", true);
                     }
                 }
+            });
+
+            $('#categ').val(data.categ);
+            loadThemes(function() {
+                updateThemeOptions(data.categ, data.theme);
             });
 
             // Map publication checkbox state (Greek 'Ναι' in unicode is \u039d\u03b1\u03b9)
@@ -637,6 +713,46 @@ $(document).ready(function() {
     // editForm submit handler
     $('#editForm').submit(function(event) {
         event.preventDefault(); // Prevent the default form submission
+
+        // Enforce required fields with tab focus
+        if (!$('#titel').val() || !$('#titel').val().trim()) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Παρακαλούμε εισάγετε Τίτλο Προγράμματος.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            }).then(() => {
+                $('#editTabs a[href="#program"]').tab('show');
+                $('#titel').focus();
+            });
+            return;
+        }
+
+        if (!$('#categ').val()) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Παρακαλούμε επιλέξτε Κατηγορία.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            }).then(() => {
+                $('#editTabs a[href="#program"]').tab('show');
+                $('#categ').focus();
+            });
+            return;
+        }
+
+        if (!$('#theme').val()) {
+            Swal.fire({
+                title: 'Προσοχή!',
+                text: 'Παρακαλούμε επιλέξτε Θεματολογία.',
+                icon: 'warning',
+                confirmButtonText: 'Εντάξει'
+            }).then(() => {
+                $('#editTabs a[href="#program"]').tab('show');
+                $('#theme').focus();
+            });
+            return;
+        }
 
         // Enforce two-step upload: check if there are selected files that haven't been uploaded
         var filesInput = document.getElementById('publish_files');

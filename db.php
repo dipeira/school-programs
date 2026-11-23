@@ -91,6 +91,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
     exit;
 }
 
+// GET THEMES ACTION
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_themes') {
+    $mysqli = db_connect();
+    $parent = isset($_GET['parent']) ? trim($_GET['parent']) : '';
+    if (!empty($parent)) {
+        $stmt = $mysqli->prepare("SELECT id, parent, value FROM themes WHERE parent = ? ORDER BY id ASC");
+        $stmt->bind_param('s', $parent);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $result = $mysqli->query("SELECT id, parent, value FROM themes ORDER BY parent, id ASC");
+    }
+    $themes = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $themes[] = $row;
+        }
+    }
+    if (isset($stmt)) $stmt->close();
+    $mysqli->close();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($themes);
+    exit;
+}
+
 // SAVE YEAR METADATA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_metadata') {
     if (empty($_SESSION['admin']) && (!isset($_SESSION['uid']) || ($_SESSION['uid'] !== 'dipeira' && $_SESSION['uid'] !== 'taypeira'))) {
@@ -455,6 +480,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['id'])) {
     
     // Set the value for database insertion
     $_POST['publish_images'] = json_encode($uploaded_paths);
+
+    // Validate required fields
+    if (empty($_POST['categ']) || empty($_POST['theme'])) {
+        $mysqli->close();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => 'Τα πεδία Κατηγορία και Θεματολογία είναι υποχρεωτικά.']);
+        exit;
+    }
     
     // Now route to INSERT or UPDATE operation
     if ($recordId == 0) {

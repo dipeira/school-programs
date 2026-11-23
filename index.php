@@ -325,7 +325,7 @@ if (!$isAuthenticated):
                             <!-- Public Categories Showcase (Always Visible in Catalog List View) -->
                             <div id="catalog_info_section" class="text-center py-4 border-top border-light-subtle mt-5">
                                 <h4 class="fw-bold text-secondary mb-4 text-center">Κατηγορίες Προγραμμάτων</h4>
-                                <div class="row row-cols-1 row-cols-md-3 g-4 mt-2 text-start justify-content-center" style="max-width: 900px; margin: 0 auto;">
+                                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mt-2 text-start justify-content-center" style="max-width: 1100px; margin: 0 auto;">
                                     <div class="col">
                                         <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-danger border-4">
                                             <div class="d-flex align-items-center mb-3">
@@ -351,6 +351,15 @@ if (!$isAuthenticated):
                                                 <h6 class="fw-bold text-dark mb-0">Πολιτιστικά Θέματα</h6>
                                             </div>
                                             <p class="text-muted small mb-0">Πρωτοβουλίες για τις τέχνες, το θέατρο, τη λογοτεχνία, την τοπική ιστορία, την παράδοση και την πολιτιστική κληρονομιά.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card border-0 bg-white h-100 p-4 rounded-3 shadow-sm border-top border-info border-4">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-briefcase-fill text-info fs-3 me-2"></i>
+                                                <h6 class="fw-bold text-dark mb-0">Αγωγή Σταδιοδρομίας</h6>
+                                            </div>
+                                            <p class="text-muted small mb-0">Δράσεις για τον επαγγελματικό προσανατολισμό, τη γνωριμία με επαγγέλματα, την επιχειρηματικότητα και τις δεξιότητες ζωής.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -820,11 +829,19 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 													<input type="text" class="form-control" id="titel" name="titel" required>
 												</div>
 												<div class="form-group">
-													<label for="categ">Κατηγορία</label>
-													<select name="categ" id="categ" class="form-select" aria-label="Κατηγορία">
+													<label for="categ">Κατηγορία *</label>
+													<select name="categ" id="categ" class="form-select" aria-label="Κατηγορία" required>
+														<option value="">-- Επιλέξτε Κατηγορία --</option>
 														<option value="Αγωγής Υγείας">Αγωγής Υγείας</option>
 														<option value="Περιβαλλοντικής Εκπαίδευσης">Περιβαλλοντικής Εκπαίδευσης</option>
 														<option value="Πολιτιστικών Θεμάτων">Πολιτιστικών Θεμάτων</option>
+														<option value="Αγωγής Σταδιοδρομίας">Αγωγής Σταδιοδρομίας</option>
+													</select>
+												</div>
+												<div class="form-group">
+													<label for="theme">Θεματολογία *</label>
+													<select name="theme" id="theme" class="form-select" aria-label="Θεματολογία" required>
+														<option value="">-- Επιλέξτε πρώτα Κατηγορία --</option>
 													</select>
 												</div>
 												<div class="form-group">
@@ -868,10 +885,6 @@ echo '<div style="font-size:9pt;color:black">' . $author . '</div>';
 														<option value="Όχι">Όχι</option>
 														<option value="Ναι">Ναι</option>
 													</select>
-												</div>
-												<div class="form-group">
-													<label for="theme">Θεματολογία</label>
-													<textarea class="form-control" id="theme" name="theme"></textarea>
 												</div>
 												<div class="form-group">
 													<label for="goal">Στόχος</label>

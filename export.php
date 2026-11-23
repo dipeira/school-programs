@@ -50,7 +50,7 @@ $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 
 // Set column headers dynamically based on database table columns
-$columnHeaders = ['id', 'timestamp', 'sch1', 'princ1', 'sch2', 'princ2', 'nam1', 'email1', 'mob1', 'eid1', 'his1', 'qua1', 'nam2', 'email2', 'mob2', 'eid2', 'his2', 'qua2', 'nam3', 'email3', 'mob3', 'eid3', 'his3', 'qua3', 'titel', 'categ', 'subti', 'praxi', 'praxidate', 'grade', 'nr', 'nr_boys', 'nr_girls', 'cha', 'arxeio', 'theme', 'goal', 'meth', 'dura', 'month', 'visit', 'foreis', 'pedia', 'diax', 'diax_other', 'm1', 'm2', 'm3', 'm4', 'm5', 'prsnt', 'notes', 'chk', 'vev'];
+$columnHeaders = ['id', 'timestamp', 'sch1', 'princ1', 'sch2', 'princ2', 'nam1', 'email1', 'mob1', 'eid1', 'his1', 'qua1', 'nam2', 'email2', 'mob2', 'eid2', 'his2', 'qua2', 'nam3', 'email3', 'mob3', 'eid3', 'his3', 'qua3', 'titel', 'categ', 'theme', 'subti', 'praxi', 'praxidate', 'grade', 'nr', 'nr_boys', 'nr_girls', 'cha', 'arxeio', 'goal', 'meth', 'dura', 'month', 'visit', 'foreis', 'pedia', 'diax', 'diax_other', 'm1', 'm2', 'm3', 'm4', 'm5', 'prsnt', 'notes', 'chk', 'vev'];
 
 // Fetch column names from the database table
 $columnNames = [];
